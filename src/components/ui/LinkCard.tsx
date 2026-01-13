@@ -1,5 +1,5 @@
 import React from 'react';
-import { LinkItem } from '../types';
+import { LinkItem } from '../../types';
 import { Settings } from 'lucide-react';
 
 interface LinkCardProps {

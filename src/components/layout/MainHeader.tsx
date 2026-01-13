@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Moon, Sun, Menu, Monitor, Settings, GripVertical, Save, X, MoreHorizontal, LayoutGrid, List, CheckCircle } from 'lucide-react';
-import { ExternalSearchSource, SearchMode } from '../types';
+import { ExternalSearchSource, SearchMode } from '../../types';
 
 interface MainHeaderProps {
   navTitleText: string;

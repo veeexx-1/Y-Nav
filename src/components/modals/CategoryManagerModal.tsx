@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { X, ArrowUp, ArrowDown, Trash2, Edit2, Plus, Check, Palette, Square, CheckSquare } from 'lucide-react';
-import { Category } from '../types';
-import Icon from './Icon';
-import IconSelector from './IconSelector';
+import { Category } from '../../types';
+import Icon from '../ui/Icon';
+import IconSelector from '../ui/IconSelector';
 
 interface CategoryManagerModalProps {
   isOpen: boolean;

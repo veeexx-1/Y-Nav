@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Loader2, Pin, Wand2, Trash2, Upload } from 'lucide-react';
-import { LinkItem, Category, AIConfig } from '../types';
-import { generateLinkDescription, suggestCategory } from '../services/geminiService';
+import { LinkItem, Category, AIConfig } from '../../types';
+import { generateLinkDescription, suggestCategory } from '../../services/geminiService';
 
 const FAVICON_CACHE_KEY = 'cloudnav_favicon_cache';
 

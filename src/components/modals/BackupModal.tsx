@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Cloud, Download, Upload, CheckCircle2, AlertCircle, RefreshCw, Save } from 'lucide-react';
-import { Category, LinkItem, WebDavConfig, SearchConfig, AIConfig } from '../types';
-import { checkWebDavConnection, uploadBackup, uploadBackupWithTimestamp, downloadBackup } from '../services/webDavService';
-import { generateBookmarkHtml, downloadHtmlFile } from '../services/exportService';
+import { Category, LinkItem, WebDavConfig, SearchConfig, AIConfig } from '../../types';
+import { checkWebDavConnection, uploadBackup, uploadBackupWithTimestamp, downloadBackup } from '../../services/webDavService';
+import { generateBookmarkHtml, downloadHtmlFile } from '../../services/exportService';
 
 interface BackupModalProps {
     isOpen: boolean;

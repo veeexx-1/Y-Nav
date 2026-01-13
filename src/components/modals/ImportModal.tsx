@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, FileText, ArrowRight, Check, AlertCircle, FolderInput, ListTree, Database } from 'lucide-react';
-import { Category, LinkItem, SearchConfig, AIConfig } from '../types';
-import { parseBookmarks } from '../services/bookmarkParser';
+import { Category, LinkItem, SearchConfig, AIConfig } from '../../types';
+import { parseBookmarks } from '../../services/bookmarkParser';
 
 interface ImportModalProps {
     isOpen: boolean;

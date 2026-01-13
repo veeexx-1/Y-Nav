@@ -1,7 +1,7 @@
 import React from 'react';
 import { Settings, ChevronLeft } from 'lucide-react';
-import { Category } from '../types';
-import Icon from './Icon';
+import { Category } from '../../types';
+import Icon from '../ui/Icon';
 
 interface SidebarProps {
   sidebarOpen: boolean;

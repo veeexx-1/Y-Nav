@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { LinkItem } from '../types';
+import { LinkItem } from '../../types';
 
 interface SortableLinkCardProps {
     link: LinkItem;

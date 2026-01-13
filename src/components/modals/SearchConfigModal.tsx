@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Globe, Search, GripVertical, Check, RotateCcw, AlertCircle } from 'lucide-react';
-import { ExternalSearchSource } from '../types';
+import { ExternalSearchSource } from '../../types';
 import {
   DndContext,
   closestCenter,

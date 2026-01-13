@@ -2,18 +2,19 @@ import React, { useMemo, useEffect, lazy, Suspense } from 'react';
 import { LinkItem, Category } from './types';
 
 // Lazy load modal components for better code splitting
-const LinkModal = lazy(() => import('./components/LinkModal'));
-const CategoryManagerModal = lazy(() => import('./components/CategoryManagerModal'));
-const BackupModal = lazy(() => import('./components/BackupModal'));
-const ImportModal = lazy(() => import('./components/ImportModal'));
-const SettingsModal = lazy(() => import('./components/SettingsModal'));
-const SearchConfigModal = lazy(() => import('./components/SearchConfigModal'));
+// Lazy load modal components for better code splitting
+const LinkModal = lazy(() => import('./components/modals/LinkModal'));
+const CategoryManagerModal = lazy(() => import('./components/modals/CategoryManagerModal'));
+const BackupModal = lazy(() => import('./components/modals/BackupModal'));
+const ImportModal = lazy(() => import('./components/modals/ImportModal'));
+const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
+const SearchConfigModal = lazy(() => import('./components/modals/SearchConfigModal'));
 
 // Eagerly load frequently used components
-import ContextMenu from './components/ContextMenu';
-import Sidebar from './components/Sidebar';
-import MainHeader from './components/MainHeader';
-import LinkSections from './components/LinkSections';
+import ContextMenu from './components/layout/ContextMenu';
+import Sidebar from './components/layout/Sidebar';
+import MainHeader from './components/layout/MainHeader';
+import LinkSections from './components/layout/LinkSections';
 
 import {
   useDataStore,

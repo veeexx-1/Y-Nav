@@ -2,10 +2,10 @@ import React from 'react';
 import { DndContext, DragEndEvent, closestCorners, SensorDescriptor } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { Pin, Trash2, CheckSquare, Upload, Search } from 'lucide-react';
-import { Category, LinkItem } from '../types';
-import Icon from './Icon';
-import LinkCard from './LinkCard';
-import SortableLinkCard from './SortableLinkCard';
+import { Category, LinkItem } from '../../types';
+import Icon from '../ui/Icon';
+import LinkCard from '../ui/LinkCard';
+import SortableLinkCard from '../ui/SortableLinkCard';
 
 interface LinkSectionsProps {
   linksCount: number;

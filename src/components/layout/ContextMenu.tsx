@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Copy, Edit2, Trash2, Pin, CopyPlus, FolderInput, ChevronRight } from 'lucide-react';
-import { Category } from '../types';
+import { Category } from '../../types';
 
 interface ContextMenuProps {
   isOpen: boolean;
