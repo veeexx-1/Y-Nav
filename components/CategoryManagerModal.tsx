@@ -106,10 +106,10 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
   const saveEdit = () => {
     if (!editingId || !editName.trim()) return;
-    const newCats = categories.map(c => c.id === editingId ? { 
-        ...c, 
-        name: editName.trim(),
-        icon: editIcon
+    const newCats = categories.map(c => c.id === editingId ? {
+      ...c,
+      name: editName.trim(),
+      icon: editIcon
     } : c);
     onUpdateCategories(newCats);
     setEditingId(null);
@@ -131,7 +131,7 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     setIconSelectorTarget(target);
     setIsIconSelectorOpen(true);
   };
-  
+
   const handleIconSelect = (iconName: string) => {
     if (iconSelectorTarget === 'edit') {
       setEditIcon(iconName);
@@ -139,12 +139,12 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       setNewCatIcon(iconName);
     }
   };
-  
+
   const cancelIconSelector = () => {
     setIsIconSelectorOpen(false);
     setIconSelectorTarget(null);
   };
-  
+
   const cancelAdd = () => {
     setNewCatName('');
     setNewCatIcon('Folder');
@@ -159,11 +159,10 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
             {/* 多选模式切换按钮 */}
             <button
               onClick={toggleBatchMode}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                isBatchMode
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isBatchMode
+                ? 'bg-accent text-white'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
             >
               {isBatchMode ? '取消多选' : '多选'}
             </button>
@@ -175,11 +174,11 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
         {/* 多选模式工具栏 */}
         {isBatchMode && (
-          <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 flex items-center justify-between">
+          <div className="px-4 py-2 bg-accent/10 dark:bg-accent/20 border-b border-accent/20 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={toggleSelectAll}
-                className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                className="flex items-center gap-2 text-sm text-accent dark:text-accent hover:opacity-80"
               >
                 {selectedCategories.size === categories.filter(c => c.id !== 'common').length ? (
                   <CheckSquare size={16} />
@@ -205,153 +204,152 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {categories.map((cat, index) => (
-            <div key={cat.id} className={`flex flex-col p-3 rounded-lg group gap-2 ${
-              isBatchMode && selectedCategories.has(cat.id)
-                ? 'bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500'
-                : 'bg-slate-50 dark:bg-slate-700/50'
-            }`}>
+            <div key={cat.id} className={`flex flex-col p-3 rounded-lg group gap-2 ${isBatchMode && selectedCategories.has(cat.id)
+              ? 'bg-accent/10 dark:bg-accent/20 border-2 border-accent'
+              : 'bg-slate-50 dark:bg-slate-700/50'
+              }`}>
               <div className="flex items-center gap-2">
-                  {/* 多选模式复选框 */}
-                  {isBatchMode && (
-                    <button
-                      onClick={() => toggleCategorySelection(cat.id)}
-                      disabled={cat.id === 'common'}
-                      className="flex-shrink-0 p-1"
-                    >
-                      {cat.id === 'common' ? (
-                        <Square size={18} className="text-slate-300 dark:text-slate-600" />
-                      ) : selectedCategories.has(cat.id) ? (
-                        <CheckSquare size={18} className="text-blue-600 dark:text-blue-400" />
-                      ) : (
-                        <Square size={18} className="text-slate-400 hover:text-blue-500" />
-                      )}
-                    </button>
-                  )}
+                {/* 多选模式复选框 */}
+                {isBatchMode && (
+                  <button
+                    onClick={() => toggleCategorySelection(cat.id)}
+                    disabled={cat.id === 'common'}
+                    className="flex-shrink-0 p-1"
+                  >
+                    {cat.id === 'common' ? (
+                      <Square size={18} className="text-slate-300 dark:text-slate-600" />
+                    ) : selectedCategories.has(cat.id) ? (
+                      <CheckSquare size={18} className="text-accent" />
+                    ) : (
+                      <Square size={18} className="text-slate-400 hover:text-accent" />
+                    )}
+                  </button>
+                )}
 
-                  {/* Order Controls - 非多选模式显示 */}
-                  {!isBatchMode && (
-                    <div className="flex flex-col gap-1 mr-2">
-                      <button
-                        onClick={() => handleMove(index, 'up')}
-                        disabled={index === 0}
-                        className="p-0.5 text-slate-400 hover:text-blue-500 disabled:opacity-30"
-                      >
-                        <ArrowUp size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleMove(index, 'down')}
-                        disabled={index === categories.length - 1}
-                        className="p-0.5 text-slate-400 hover:text-blue-500 disabled:opacity-30"
-                      >
-                        <ArrowDown size={14} />
-                      </button>
+                {/* Order Controls - 非多选模式显示 */}
+                {!isBatchMode && (
+                  <div className="flex flex-col gap-1 mr-2">
+                    <button
+                      onClick={() => handleMove(index, 'up')}
+                      disabled={index === 0}
+                      className="p-0.5 text-slate-400 hover:text-blue-500 disabled:opacity-30"
+                    >
+                      <ArrowUp size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleMove(index, 'down')}
+                      disabled={index === categories.length - 1}
+                      className="p-0.5 text-slate-400 hover:text-blue-500 disabled:opacity-30"
+                    >
+                      <ArrowDown size={14} />
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  {editingId === cat.id && cat.id !== 'common' ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <Icon name={editIcon} size={16} />
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="flex-1 p-1.5 px-2 text-sm rounded border border-accent dark:bg-slate-800 dark:text-white outline-none"
+                          placeholder="分类名称"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                          onClick={() => openIconSelector('edit')}
+                          title="选择图标"
+                        >
+                          <Palette size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Icon name={cat.icon} size={16} />
+                      <span className="font-medium dark:text-slate-200 truncate">
+                        {cat.name}
+                        {cat.id === 'common' && (
+                          <span className="ml-2 text-xs text-slate-400">(默认分类，不可编辑)</span>
+                        )}
+                      </span>
                     </div>
                   )}
+                </div>
 
-                  <div className="flex items-center gap-2">
-                    {editingId === cat.id && cat.id !== 'common' ? (
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <Icon name={editIcon} size={16} />
-                          <input 
-                            type="text" 
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            className="flex-1 p-1.5 px-2 text-sm rounded border border-blue-500 dark:bg-slate-800 dark:text-white outline-none"
-                            placeholder="分类名称"
-                            autoFocus
-                          />
-                          <button
-                            type="button"
-                            className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
-                            onClick={() => openIconSelector('edit')}
-                            title="选择图标"
-                          >
-                            <Palette size={16} />
-                          </button>
-                        </div>
-                      </div>
+                {/* Actions */}
+                {!isBatchMode && (
+                  <div className="flex items-center gap-1 self-start mt-1">
+                    {editingId === cat.id ? (
+                      <button onClick={saveEdit} className="text-green-500 hover:bg-green-50 dark:hover:bg-slate-600 p-1.5 rounded bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-600"><Check size={16} /></button>
                     ) : (
-                      <div className="flex items-center gap-2">
-                        <Icon name={cat.icon} size={16} />
-                        <span className="font-medium dark:text-slate-200 truncate">
-                          {cat.name}
-                          {cat.id === 'common' && (
-                            <span className="ml-2 text-xs text-slate-400">(默认分类，不可编辑)</span>
-                          )}
-                        </span>
-                      </div>
+                      <>
+                        {cat.id !== 'common' && (
+                          <button onClick={() => handleStartEdit(cat)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded">
+                            <Edit2 size={14} />
+                          </button>
+                        )}
+                        {/* 只有非"常用推荐"分类才显示删除按钮 */}
+                        {cat.id !== 'common' && (
+                          <button
+                            onClick={() => handleDeleteClick(cat)}
+                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                        {/* "常用推荐"分类提示不可删除 */}
+                        {cat.id === 'common' && (
+                          <div className="px-2 text-xs text-slate-400" title="常用推荐分类不能被删除">
+                            不可删除
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
-
-                  {/* Actions */}
-                  {!isBatchMode && (
-                    <div className="flex items-center gap-1 self-start mt-1">
-                      {editingId === cat.id ? (
-                        <button onClick={saveEdit} className="text-green-500 hover:bg-green-50 dark:hover:bg-slate-600 p-1.5 rounded bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-600"><Check size={16}/></button>
-                      ) : (
-                        <>
-                          {cat.id !== 'common' && (
-                            <button onClick={() => handleStartEdit(cat)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded">
-                              <Edit2 size={14} />
-                            </button>
-                          )}
-                          {/* 只有非"常用推荐"分类才显示删除按钮 */}
-                          {cat.id !== 'common' && (
-                            <button
-                              onClick={() => handleDeleteClick(cat)}
-                              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                          {/* "常用推荐"分类提示不可删除 */}
-                          {cat.id === 'common' && (
-                            <div className="px-2 text-xs text-slate-400" title="常用推荐分类不能被删除">
-                              不可删除
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
+                )}
               </div>
             </div>
           ))}
         </div>
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-           <label className="text-xs font-semibold text-slate-500 uppercase mb-2 block">添加新分类</label>
-           <div className="flex flex-col gap-2">
-             <div className="flex items-center gap-2">
-               <Icon name={newCatIcon} size={16} />
-               <input 
-                  type="text"
-                  value={newCatName}
-                  onChange={(e) => setNewCatName(e.target.value)}
-                  placeholder="分类名称"
-                  className="flex-1 p-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-               />
-               <button
-                 type="button"
-                 className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
-                 onClick={() => openIconSelector('new')}
-                 title="选择图标"
-               >
-                 <Palette size={16} />
-             </button>
-           </div>
+          <label className="text-xs font-semibold text-slate-500 uppercase mb-2 block">添加新分类</label>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Icon name={newCatIcon} size={16} />
+              <input
+                type="text"
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                placeholder="分类名称"
+                className="flex-1 p-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <button
+                type="button"
+                className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
+                onClick={() => openIconSelector('new')}
+                title="选择图标"
+              >
+                <Palette size={16} />
+              </button>
+            </div>
             <div className="flex justify-end">
-                <button 
-                   onClick={handleAdd}
-                   disabled={!newCatName.trim()}
-                   className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
-                 >
-                   <Plus size={18} />
-                 </button>
-             </div>
-           </div>
-          
+              <button
+                onClick={handleAdd}
+                disabled={!newCatName.trim()}
+                className="bg-accent text-white hover:opacity-90 disabled:opacity-50 px-4 py-2 rounded-lg transition-colors flex items-center"
+              >
+                <Plus size={18} />
+              </button>
+            </div>
+          </div>
+
           {/* 图标选择器弹窗 */}
           {isIconSelectorOpen && (
             <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -367,7 +365,7 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                   </button>
                 </div>
                 <div className="flex-1 overflow-auto p-4">
-                  <IconSelector 
+                  <IconSelector
                     onSelectIcon={(iconName) => {
                       handleIconSelect(iconName);
                       setIsIconSelectorOpen(false);
@@ -378,7 +376,7 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
               </div>
             </div>
           )}
-          
+
         </div>
       </div>
     </div>

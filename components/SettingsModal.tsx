@@ -1,6 +1,6 @@
 // ... (Same imports)
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, Bot, Key, Globe, Sparkles, PauseCircle, RefreshCw, Layers, Upload, Zap, List, CheckCircle, AlertCircle, Loader2, Palette } from 'lucide-react';
+import { X, Save, Bot, Key, Globe, Sparkles, PauseCircle, RefreshCw, Layers, Upload, Zap, List, CheckCircle, AlertCircle, Loader2, Palette, Database, Download } from 'lucide-react';
 import { AIConfig, LinkItem, SiteSettings } from '../types';
 import { generateLinkDescription, testAIConnection, fetchAvailableModels } from '../services/geminiService';
 
@@ -54,9 +54,9 @@ const generateSvgIcon = (text: string, color1: string, color2: string) => {
 };
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
-  isOpen, onClose, config, siteSettings, onSave, links, onUpdateLinks
+  isOpen, onClose, config, siteSettings, onSave, links, onUpdateLinks, onOpenImport, onOpenBackup
 }) => {
-  const [activeTab, setActiveTab] = useState<'site' | 'ai' | 'appearance'>('site');
+  const [activeTab, setActiveTab] = useState<'site' | 'ai' | 'appearance' | 'data'>('site');
   const [localConfig, setLocalConfig] = useState<AIConfig>(config);
 
   const [localSiteSettings, setLocalSiteSettings] = useState<SiteSettings>(() => ({
@@ -265,6 +265,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             >
               <Palette size={16} />
               <span>外观</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('data')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'data'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+            >
+              <Database size={16} />
+              <span>数据</span>
             </button>
           </div>
         </div>
@@ -582,13 +592,60 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
           )}
+
+
+          {activeTab === 'data' && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              {/* Data Management */}
+              <div>
+                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                  <Database size={16} className="text-slate-500" />
+                  数据管理 (Data Management)
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <button
+                    onClick={() => {
+                      onOpenImport();
+                      onClose();
+                    }}
+                    className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 hover:border-accent hover:bg-accent/5 dark:hover:bg-accent/10 transition-all group"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:text-accent group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors shadow-sm">
+                      <Upload size={24} />
+                    </div>
+                    <div className="text-center">
+                      <div className="font-bold text-slate-700 dark:text-slate-200 group-hover:text-accent">导入数据</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">支持 Chrome HTML 书签导入</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onOpenBackup();
+                      onClose();
+                    }}
+                    className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 hover:border-accent hover:bg-accent/5 dark:hover:bg-accent/10 transition-all group"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:text-accent group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors shadow-sm">
+                      <Download size={24} />
+                    </div>
+                    <div className="text-center">
+                      <div className="font-bold text-slate-700 dark:text-slate-200 group-hover:text-accent">备份 / 恢复</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">导出 JSON 备份或管理 WebDAV</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
         <div className="p-6 pt-2 border-t border-transparent">
           <button
             onClick={handleSave}
-            className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold py-3.5 px-4 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-lg shadow-slate-200 dark:shadow-none active:scale-[0.99] text-sm flex items-center justify-center gap-2"
+            className="w-full bg-slate-900 dark:bg-accent text-white font-bold py-3.5 px-4 rounded-xl hover:bg-slate-800 dark:hover:bg-accent/90 transition-all shadow-lg shadow-slate-200 dark:shadow-none active:scale-[0.99] text-sm flex items-center justify-center gap-2"
           >
             <Save size={16} />
             <span>保存设置</span>

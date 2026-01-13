@@ -365,6 +365,8 @@ function App() {
         onSave={saveAIConfig}
         links={links}
         onUpdateLinks={(newLinks) => updateData(newLinks, categories)}
+        onOpenImport={() => setIsImportModalOpen(true)}
+        onOpenBackup={() => setIsBackupModalOpen(true)}
       />
 
       <SearchConfigModal

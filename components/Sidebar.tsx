@@ -1,5 +1,5 @@
 import React from 'react';
-import { Upload, Settings, CloudCog, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Settings, ChevronLeft } from 'lucide-react';
 import { Category } from '../types';
 import Icon from './Icon';
 
@@ -17,8 +17,6 @@ interface SidebarProps {
   onSelectCategory: (category: Category) => void;
   onToggleCollapsed: () => void;
   onOpenCategoryManager: () => void;
-  onOpenImport: () => void;
-  onOpenBackup: () => void;
   onOpenSettings: () => void;
 }
 
@@ -36,8 +34,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   onSelectCategory,
   onToggleCollapsed,
   onOpenCategoryManager,
-  onOpenImport,
-  onOpenBackup,
   onOpenSettings
 }) => {
   // 状态机：'typing' | 'pausing' | 'deleting'
