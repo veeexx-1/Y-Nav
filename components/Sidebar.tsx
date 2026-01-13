@@ -259,13 +259,13 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             <div className="flex justify-center">
               <div className="flex flex-col gap-2 w-fit">
-                {/* Hidden entry for advanced settings, moved to top to push content down */}
-                <div className="flex items-center gap-2 opacity-0 hover:opacity-100 transition-opacity duration-300 justify-center mb-1">
-                  <a href={repoUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-400 hover:text-accent hover:underline cursor-pointer">
+                {/* Footer Links - Visible by default now */}
+                <div className="flex items-center gap-3 justify-center mb-2 px-2 py-1 round-lg bg-slate-50/50 dark:bg-white/5 backdrop-blur-sm border border-slate-100 dark:border-white/5 rounded-full">
+                  <a href={repoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-accent font-medium transition-colors">
                     GitHub
                   </a>
-                  <span className="text-[10px] text-slate-300">•</span>
-                  <button onClick={onOpenSettings} className="text-[10px] text-slate-400 hover:text-accent hover:underline cursor-pointer">
+                  <span className="text-[10px] text-slate-300 dark:text-slate-600">|</span>
+                  <button onClick={onOpenSettings} className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-accent font-medium transition-colors">
                     关于
                   </button>
                 </div>

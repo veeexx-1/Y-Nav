@@ -14,6 +14,7 @@ interface LinkSectionsProps {
   selectedCategory: string;
   searchQuery: string;
   categories: Category[];
+  siteTitle: string;
   siteCardStyle: 'detailed' | 'simple';
   isSortingPinned: boolean;
   isSortingMode: string | null;
@@ -33,6 +34,34 @@ interface LinkSectionsProps {
   onLinkEdit: (link: LinkItem) => void;
 }
 
+const ClockWidget: React.FC = () => {
+  const [time, setTime] = React.useState(new Date());
+
+  React.useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
+  };
+
+  return (
+    <div className="flex flex-col items-end pointer-events-none select-none">
+      <div className="text-4xl font-mono font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-none bg-clip-text text-transparent bg-gradient-to-br from-slate-700 to-slate-900 dark:from-white dark:to-slate-400">
+        {formatTime(time)}
+      </div>
+      <div className="text-xs font-medium text-accent mt-1 opacity-80">
+        {formatDate(time)}
+      </div>
+    </div>
+  );
+};
+
 const LinkSections: React.FC<LinkSectionsProps> = ({
   linksCount,
   pinnedLinks,
@@ -40,6 +69,7 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
   selectedCategory,
   searchQuery,
   categories,
+  siteTitle,
   siteCardStyle,
   isSortingPinned,
   isSortingMode,
@@ -78,13 +108,19 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
 
         {/* Dashboard Header / Greeting */}
         {!searchQuery && selectedCategory === 'all' && (
-          <div className="pt-8 pb-2">
-            <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-1">
-              {getGreeting()}，<span className="text-accent">Y-Nav</span>
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">
-              准备开始高效的一天了吗？
-            </p>
+          <div className="pt-8 pb-4 flex items-end justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-1">
+                {getGreeting()}，<span className="text-accent">{siteTitle}</span>
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">
+                准备开始高效的一天了吗？
+              </p>
+            </div>
+            {/* Clock Widget */}
+            <div className="hidden sm:block text-right">
+              <ClockWidget />
+            </div>
           </div>
         )}
 

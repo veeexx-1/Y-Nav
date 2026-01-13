@@ -265,26 +265,26 @@ const MainHeader: React.FC<MainHeaderProps> = ({
           </button>
 
           {/* View Mode Toggles (Desktop) */}
-          <div className="hidden md:flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200/50 dark:border-white/5 mr-1">
+          <div className="hidden md:flex items-center p-1 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/50 mr-2 backdrop-blur-sm">
             <button
               onClick={() => onViewModeChange('simple')}
               className={`p-1.5 rounded-lg transition-all ${siteCardStyle === 'simple'
-                ? 'bg-white dark:bg-slate-700 text-accent shadow-sm'
-                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                ? 'bg-white dark:bg-slate-700 text-accent shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-slate-700/50'
                 }`}
               title="简约视图"
             >
-              <List size={14} />
+              <List size={16} />
             </button>
             <button
               onClick={() => onViewModeChange('detailed')}
               className={`p-1.5 rounded-lg transition-all ${siteCardStyle === 'detailed'
-                ? 'bg-white dark:bg-slate-700 text-accent shadow-sm'
-                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                ? 'bg-white dark:bg-slate-700 text-accent shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-slate-700/50'
                 }`}
               title="详情视图"
             >
-              <LayoutGrid size={14} />
+              <LayoutGrid size={16} />
             </button>
           </div>
 
@@ -323,22 +323,26 @@ const MainHeader: React.FC<MainHeaderProps> = ({
           )}
 
           {/* Theme Toggle */}
-          <button
-            onClick={onToggleTheme}
-            className="p-2 rounded-xl text-slate-500 hover:text-accent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200/50 dark:hover:border-white/5"
-            title={themeMode === 'system' ? '跟随系统' : darkMode ? '切换亮色' : '切换深色'}
-          >
-            {themeMode === 'system' ? <Monitor size={18} /> : darkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+          {/* Settings Group */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/50 mr-2 backdrop-blur-sm">
+            {/* Theme Toggle */}
+            <button
+              onClick={onToggleTheme}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-accent hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+              title={themeMode === 'system' ? '跟随系统' : darkMode ? '切换亮色' : '切换深色'}
+            >
+              {themeMode === 'system' ? <Monitor size={16} /> : darkMode ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
 
-          {/* Settings */}
-          <button
-            onClick={onOpenSettings}
-            className="p-2 rounded-xl text-slate-500 hover:text-accent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200/50 dark:hover:border-white/5 mr-1"
-            title="系统设置"
-          >
-            <Settings size={18} />
-          </button>
+            {/* Settings Toggle */}
+            <button
+              onClick={onOpenSettings}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-accent hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+              title="系统设置"
+            >
+              <Settings size={16} />
+            </button>
+          </div>
 
           {/* Add Link - Primary Action */}
           <button

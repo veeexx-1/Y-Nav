@@ -489,6 +489,7 @@ function App() {
             selectedCategory={selectedCategory}
             searchQuery={searchQuery}
             categories={categories}
+            siteTitle={siteSettings.title}
             siteCardStyle={siteSettings.cardStyle}
             isSortingPinned={isSortingPinned}
             isSortingMode={isSortingMode}
