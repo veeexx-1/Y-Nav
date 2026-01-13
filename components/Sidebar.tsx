@@ -11,6 +11,7 @@ interface SidebarProps {
   navTitleShort: string;
   selectedCategory: string;
   categories: Category[];
+  linkCounts: Record<string, number>;
   repoUrl: string;
   onSelectAll: () => void;
   onSelectCategory: (category: Category) => void;
@@ -29,6 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   navTitleShort,
   selectedCategory,
   categories,
+  linkCounts,
   repoUrl,
   onSelectAll,
   onSelectCategory,
@@ -170,7 +172,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={onSelectAll}
           title="置顶网站"
-          className={`relative w-full rounded-xl transition-all duration-200 mb-1 ${isSidebarCollapsed ? 'flex items-center justify-center p-2.5' : 'flex items-center gap-3 px-3 py-2.5'} ${selectedCategory === 'all'
+          className={`relative w-full rounded-xl transition-all duration-200 mb-1Group ${isSidebarCollapsed ? 'flex items-center justify-center p-2.5' : 'flex items-center gap-3 px-3 py-2.5'} ${selectedCategory === 'all'
             ? 'bg-gradient-to-r from-accent/15 to-transparent text-accent shadow-sm ring-1 ring-inset ring-accent/20'
             : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
@@ -179,9 +181,18 @@ const Sidebar: React.FC<SidebarProps> = ({
             <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-full bg-accent"></span>
           )}
           <div className={`flex items-center justify-center transition-colors ${isSidebarCollapsed ? 'p-2 rounded-lg' : 'p-1'} ${selectedCategory === 'all' ? 'text-accent' : 'text-slate-500 dark:text-slate-400'}`}>
-            <Icon name="LayoutGrid" size={18} />
+            <Icon name="Pin" size={18} />
           </div>
-          {!isSidebarCollapsed && <span className="font-medium">置顶网站</span>}
+          {!isSidebarCollapsed && (
+            <>
+              <span className="font-medium flex-1 text-left">置顶网站</span>
+              {linkCounts['pinned'] > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${selectedCategory === 'all' ? 'bg-accent/20 text-accent' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                  {linkCounts['pinned']}
+                </span>
+              )}
+            </>
+          )}
         </button>
 
         {/* Category Header */}
@@ -204,6 +215,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="space-y-0.5">
           {categories.map((cat) => {
             const isSelected = selectedCategory === cat.id;
+            const count = linkCounts[cat.id] || 0;
             return (
               <button
                 key={cat.id}
@@ -228,7 +240,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <Icon name={cat.icon} size={16} />
                 </div>
                 {!isSidebarCollapsed && (
-                  <span className={`truncate flex-1 text-left text-sm ${isSelected ? 'font-medium' : ''}`}>{cat.name}</span>
+                  <>
+                    <span className={`truncate flex-1 text-left text-sm ${isSelected ? 'font-medium' : ''}`}>{cat.name}</span>
+                    {count > 0 && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isSelected ? 'bg-accent/20 text-accent' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors'}`}>
+                        {count}
+                      </span>
+                    )}
+                  </>
                 )}
               </button>
             );
@@ -238,33 +257,36 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer Actions */}
       {!isSidebarCollapsed && (
-        <div className="px-5 pb-5 shrink-0">
-          {/* Centered Divider */}
-          <div className="w-full h-px bg-slate-100 dark:bg-slate-800 mb-4 scale-95"></div>
+        <div className="px-3 pb-6 shrink-0 flex justify-center">
+          <div className="w-full">
+            <div className="w-full h-px bg-slate-100 dark:bg-slate-800 mb-4"></div>
 
-          <div className="flex flex-col gap-1.5 px-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 font-mono">
-                © 2026 Y-Nav
-              </span>
-              <span className="px-1.5 py-0.5 rounded-[4px] bg-slate-100 dark:bg-slate-800 text-[10px] font-medium text-slate-400 dark:text-slate-500 border border-slate-200/50 dark:border-white/5 font-mono">
-                v1.2.0
-              </span>
-            </div>
+            <div className="flex justify-center">
+              <div className="flex flex-col gap-2 w-fit">
+                {/* Hidden entry for advanced settings, moved to top to push content down */}
+                <div className="flex items-center gap-2 opacity-0 hover:opacity-100 transition-opacity duration-300 justify-center mb-1">
+                  <a href={repoUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-400 hover:text-accent hover:underline cursor-pointer">
+                    GitHub
+                  </a>
+                  <span className="text-[10px] text-slate-300">•</span>
+                  <button onClick={onOpenSettings} className="text-[10px] text-slate-400 hover:text-accent hover:underline cursor-pointer">
+                    关于
+                  </button>
+                </div>
 
-            <p className="text-[10px] text-slate-300 dark:text-slate-600">
-              Personal Navigation Dashboard
-            </p>
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-sm font-bold text-slate-500 dark:text-slate-400 font-mono tracking-tight">
+                    © 2026 Y-Nav
+                  </span>
+                  <span className="px-1.5 py-[2px] rounded-md bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-white/5 font-mono ml-4">
+                    v1.2.0
+                  </span>
+                </div>
 
-            {/* Hidden entry for advanced settings if needed later, or social links */}
-            <div className="mt-1 flex items-center gap-2 opacity-0 hover:opacity-100 transition-opacity duration-300">
-              <a href={repoUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-400 hover:text-accent hover:underline cursor-pointer">
-                GitHub
-              </a>
-              <span className="text-[10px] text-slate-300">•</span>
-              <button onClick={onOpenSettings} className="text-[10px] text-slate-400 hover:text-accent hover:underline cursor-pointer">
-                关于
-              </button>
+                <p className="text-[11px] font-medium text-slate-300 dark:text-slate-600 leading-none text-center">
+                  Personal Navigation Dashboard
+                </p>
+              </div>
             </div>
           </div>
         </div>

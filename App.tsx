@@ -220,6 +220,31 @@ function App() {
   const canSortPinned = selectedCategory === 'all' && !searchQuery && pinnedLinks.length > 1;
   const canSortCategory = selectedCategory !== 'all' && displayedLinks.length > 1;
 
+  // === Computed: Link Counts ===
+  const linkCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    // Initialize all categories with 0
+    categories.forEach(cat => counts[cat.id] = 0);
+    counts['pinned'] = 0;
+
+    links.forEach(link => {
+      // Count by category
+      if (counts[link.categoryId] !== undefined) {
+        counts[link.categoryId]++;
+      } else {
+        // Fallback for unknown categories, though shouldn't happen
+        counts[link.categoryId] = 1;
+      }
+
+      // Count pinned
+      if (link.pinned) {
+        counts['pinned']++;
+      }
+    });
+
+    return counts;
+  }, [links, categories]);
+
   // === Handlers ===
   const handleImportConfirm = (newLinks: LinkItem[], newCategories: Category[]) => {
     importData(newLinks, newCategories);
@@ -350,6 +375,7 @@ function App() {
         navTitleShort={navTitleShort}
         selectedCategory={selectedCategory}
         categories={categories}
+        linkCounts={linkCounts}
         repoUrl={GITHUB_REPO_URL}
         onSelectAll={selectAll}
         onSelectCategory={handleCategoryClick}

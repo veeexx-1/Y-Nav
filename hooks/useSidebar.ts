@@ -6,7 +6,7 @@ export function useSidebar() {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-    const sidebarWidthClass = isSidebarCollapsed ? 'w-64 lg:w-20' : 'w-64 lg:w-64';
+    const sidebarWidthClass = isSidebarCollapsed ? 'w-64 lg:w-20' : 'w-64 lg:w-56';
 
     const openSidebar = useCallback(() => {
         setSidebarOpen(true);
