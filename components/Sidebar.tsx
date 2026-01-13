@@ -187,7 +187,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <>
               <span className="font-medium flex-1 text-left">置顶网站</span>
               {linkCounts['pinned'] > 0 && (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${selectedCategory === 'all' ? 'bg-accent/20 text-accent' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${selectedCategory === 'all' ? 'bg-accent/20 text-accent' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-400 border border-slate-200/50 dark:border-slate-700/50'}`}>
                   {linkCounts['pinned']}
                 </span>
               )}
@@ -243,7 +243,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <>
                     <span className={`truncate flex-1 text-left text-sm ${isSelected ? 'font-medium' : ''}`}>{cat.name}</span>
                     {count > 0 && (
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isSelected ? 'bg-accent/20 text-accent' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all ${isSelected ? 'bg-accent/20 text-accent' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-400 border border-slate-200/50 dark:border-slate-700/50 group-hover:bg-slate-100 dark:group-hover:bg-slate-700 group-hover:border-transparent'}`}>
                         {count}
                       </span>
                     )}

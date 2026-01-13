@@ -54,46 +54,46 @@ const callOpenAICompatible = async (config: AIConfig, systemPrompt: string, user
  * Uses configured AI to generate a description
  */
 export const generateLinkDescription = async (title: string, url: string, config: AIConfig): Promise<string> => {
-  if (!config.apiKey) {
-    return "请在设置中配置 API Key";
-  }
+    if (!config.apiKey) {
+        return "请在设置中配置 API Key";
+    }
 
-  const prompt = `
+    const prompt = `
       Title: ${title}
       URL: ${url}
       Please write a very short description (max 15 words) in Chinese (Simplified) that explains what this website is for. Return ONLY the description text. No quotes.
   `;
 
-  try {
-    if (config.provider === 'gemini') {
-        const ai = new GoogleGenAI({ apiKey: config.apiKey });
-        // Use user defined model or fallback
-        const modelName = config.model || 'gemini-2.5-flash';
-        
-        const response: GenerateContentResponse = await ai.models.generateContent({
-            model: modelName,
-            contents: `I have a website bookmark. ${prompt}`,
-        });
-        return response.text ? response.text.trim() : "无法生成描述";
-    } else {
-        // OpenAI Compatible
-        const result = await callOpenAICompatible(
-            config, 
-            "You are a helpful assistant that summarizes website bookmarks.", 
-            prompt
-        );
-        return result || "生成描述失败";
+    try {
+        if (config.provider === 'gemini') {
+            const ai = new GoogleGenAI({ apiKey: config.apiKey });
+            // Use user defined model or fallback
+            const modelName = config.model || 'gemini-2.5-flash';
+
+            const response: GenerateContentResponse = await ai.models.generateContent({
+                model: modelName,
+                contents: `I have a website bookmark. ${prompt}`,
+            });
+            return response.text ? response.text.trim() : "无法生成描述";
+        } else {
+            // OpenAI Compatible
+            const result = await callOpenAICompatible(
+                config,
+                "You are a helpful assistant that summarizes website bookmarks.",
+                prompt
+            );
+            return result || "生成描述失败";
+        }
+    } catch (error) {
+        console.error("AI generation error:", error);
+        return "生成描述失败";
     }
-  } catch (error) {
-    console.error("AI generation error:", error);
-    return "生成描述失败";
-  }
 };
 
 /**
  * Suggests a category
  */
-export const suggestCategory = async (title: string, url: string, categories: {id: string, name: string}[], config: AIConfig): Promise<string | null> => {
+export const suggestCategory = async (title: string, url: string, categories: { id: string, name: string }[], config: AIConfig): Promise<string | null> => {
     if (!config.apiKey) return null;
 
     const catList = categories.map(c => `${c.id}: ${c.name}`).join('\n');
@@ -110,14 +110,14 @@ export const suggestCategory = async (title: string, url: string, categories: {i
         if (config.provider === 'gemini') {
             const ai = new GoogleGenAI({ apiKey: config.apiKey });
             const modelName = config.model || 'gemini-2.5-flash';
-            
+
             const response: GenerateContentResponse = await ai.models.generateContent({
                 model: modelName,
                 contents: `Task: Categorize this website.\n${prompt}`,
             });
             return response.text ? response.text.trim() : null;
         } else {
-             // OpenAI Compatible
+            // OpenAI Compatible
             const result = await callOpenAICompatible(
                 config,
                 "You are an intelligent classification assistant. You only output the category ID.",
@@ -130,3 +130,88 @@ export const suggestCategory = async (title: string, url: string, categories: {i
         return null;
     }
 }
+
+/**
+ * Tests the connection to the AI provider
+ */
+export const testAIConnection = async (config: AIConfig): Promise<boolean> => {
+    if (!config.apiKey) return false;
+
+    try {
+        if (config.provider === 'gemini') {
+            const ai = new GoogleGenAI({ apiKey: config.apiKey });
+            const modelName = config.model || 'gemini-2.5-flash';
+            // Try a simple generation
+            await ai.models.generateContent({
+                model: modelName,
+                contents: "Hello",
+            });
+            return true;
+        } else {
+            // OpenAI Test
+            const result = await callOpenAICompatible(
+                config,
+                "You are a connection tester.",
+                "Ping"
+            );
+            return result.length > 0;
+        }
+    } catch (e) {
+        console.error("Connection Test Failed", e);
+        return false;
+    }
+};
+
+/**
+ * Fetches available models from the provider
+ */
+export const fetchAvailableModels = async (config: AIConfig): Promise<string[]> => {
+    if (!config.apiKey) return [];
+
+    try {
+        if (config.provider === 'gemini') {
+            // Use REST API for listing models to keep it guaranteed
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`);
+            if (!response.ok) return [];
+            const data = await response.json();
+            // Data format: { models: [{ name: 'models/gemini-pro', ... }] }
+            if (data.models && Array.isArray(data.models)) {
+                return data.models
+                    .map((m: any) => m.name.replace('models/', '')) // Strip prefix
+                    .filter((n: string) => n.includes('gemini')); // Simple filter
+            }
+            return [];
+        } else {
+            // OpenAI Compatible
+            // Need to extract base URL from the config which might be user entered
+            let baseUrl = config.baseUrl || 'https://api.openai.com/v1';
+            // Common Cleanup: remove /chat/completions if user added it
+            baseUrl = baseUrl.replace(/\/chat\/completions\/?$/, '');
+            baseUrl = baseUrl.replace(/\/v1\/?$/, ''); // We often need to add /v1 back for models, strictly speaking /v1/models is standard
+
+            // Re-construct standard path
+            const modelsUrl = `${baseUrl}/v1/models`;
+
+            const response = await fetch(modelsUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${config.apiKey}`
+                }
+            });
+
+            if (!response.ok) {
+                return [];
+            }
+
+            const data = await response.json();
+            // OpenAI format: { data: [ { id: 'gpt-3.5-turbo', ... } ] }
+            if (data.data && Array.isArray(data.data)) {
+                return data.data.map((m: any) => m.id).sort();
+            }
+            return [];
+        }
+    } catch (e) {
+        console.error("Fetch Models Failed", e);
+        return [];
+    }
+};
