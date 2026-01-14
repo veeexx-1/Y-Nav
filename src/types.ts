@@ -25,6 +25,9 @@ export interface SiteSettings {
   accentColor?: string; // RGB values e.g. "99 102 241"
   grayScale?: 'slate' | 'zinc' | 'neutral'; // Background tone
   closeOnBackdrop?: boolean; // Allow closing modals by clicking the backdrop
+  backgroundImage?: string; // Background image URL or data URL
+  backgroundImageEnabled?: boolean; // Enable custom background image
+  backgroundMotion?: boolean; // Enable background highlight motion
 }
 
 export interface AppState {

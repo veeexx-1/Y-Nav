@@ -7,6 +7,9 @@ interface AppearanceTabProps {
 }
 
 const AppearanceTab: React.FC<AppearanceTabProps> = ({ settings, onChange }) => {
+    const isBackgroundEnabled = !!settings.backgroundImageEnabled;
+    const isBackgroundMotionEnabled = !!settings.backgroundMotion;
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             {/* Theme Color */}
@@ -76,6 +79,88 @@ const AppearanceTab: React.FC<AppearanceTabProps> = ({ settings, onChange }) => 
                         <div className="text-[10px] text-neutral-500 dark:text-neutral-500 mt-0.5">柔和舒适</div>
                     </button>
                 </div>
+            </div>
+
+            <div className="h-px bg-slate-100 dark:bg-slate-800" />
+
+            {/* Custom Background */}
+            <div className="space-y-3">
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-200">自定义背景</label>
+                <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                    <div>
+                        <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">启用背景图</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">支持 URL 或 data URL</div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => onChange('backgroundImageEnabled', !isBackgroundEnabled)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isBackgroundEnabled
+                            ? 'bg-accent'
+                            : 'bg-slate-300 dark:bg-slate-600'
+                            }`}
+                        aria-pressed={isBackgroundEnabled}
+                        aria-label="启用背景图"
+                    >
+                        <span
+                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${isBackgroundEnabled
+                                ? 'translate-x-5'
+                                : 'translate-x-1'
+                                }`}
+                        />
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <input
+                        type="text"
+                        value={settings.backgroundImage || ''}
+                        onChange={(e) => onChange('backgroundImage', e.target.value)}
+                        placeholder="https://example.com/background.jpg"
+                        disabled={!isBackgroundEnabled}
+                        className={`flex-1 px-4 py-2.5 rounded-xl text-sm border transition-all ${isBackgroundEnabled
+                            ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none'
+                            : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
+                            }`}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => onChange('backgroundImage', '')}
+                        disabled={!isBackgroundEnabled || !settings.backgroundImage}
+                        className={`px-3 py-2 rounded-xl text-xs font-semibold transition-colors border ${!isBackgroundEnabled || !settings.backgroundImage
+                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                            }`}
+                    >
+                        清空
+                    </button>
+                </div>
+            </div>
+
+            <div className="h-px bg-slate-100 dark:bg-slate-800" />
+
+            {/* Background Motion */}
+            <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                <div>
+                    <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">高光动态</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">轻微流动，提升层次感</div>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => onChange('backgroundMotion', !isBackgroundMotionEnabled)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isBackgroundMotionEnabled
+                        ? 'bg-accent'
+                        : 'bg-slate-300 dark:bg-slate-600'
+                        }`}
+                    aria-pressed={isBackgroundMotionEnabled}
+                    aria-label="高光动态"
+                >
+                    <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${isBackgroundMotionEnabled
+                            ? 'translate-x-5'
+                            : 'translate-x-1'
+                            }`}
+                    />
+                </button>
             </div>
         </div>
     );

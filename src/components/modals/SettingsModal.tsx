@@ -37,7 +37,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     cardStyle: siteSettings?.cardStyle || 'detailed',
     accentColor: siteSettings?.accentColor || '99 102 241',
     grayScale: siteSettings?.grayScale || 'slate',
-    closeOnBackdrop: siteSettings?.closeOnBackdrop ?? false
+    closeOnBackdrop: siteSettings?.closeOnBackdrop ?? false,
+    backgroundImage: siteSettings?.backgroundImage || '',
+    backgroundImageEnabled: siteSettings?.backgroundImageEnabled ?? false,
+    backgroundMotion: siteSettings?.backgroundMotion ?? false
   }));
 
   useEffect(() => {
@@ -49,7 +52,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         cardStyle: siteSettings?.cardStyle || 'detailed',
         accentColor: siteSettings?.accentColor || '99 102 241',
         grayScale: siteSettings?.grayScale || 'slate',
-        closeOnBackdrop: siteSettings?.closeOnBackdrop ?? false
+        closeOnBackdrop: siteSettings?.closeOnBackdrop ?? false,
+        backgroundImage: siteSettings?.backgroundImage || '',
+        backgroundImageEnabled: siteSettings?.backgroundImageEnabled ?? false,
+        backgroundMotion: siteSettings?.backgroundMotion ?? false
       });
       setActiveTab('site');
     }

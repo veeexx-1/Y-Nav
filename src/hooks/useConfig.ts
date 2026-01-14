@@ -14,7 +14,12 @@ const DEFAULT_SITE_SETTINGS: SiteSettings = {
     navTitle: '元启',
     favicon: '',
     cardStyle: 'detailed',
-    closeOnBackdrop: false
+    accentColor: '99 102 241',
+    grayScale: 'slate',
+    closeOnBackdrop: false,
+    backgroundImage: '',
+    backgroundImageEnabled: false,
+    backgroundMotion: false
 };
 
 export function useConfig() {
