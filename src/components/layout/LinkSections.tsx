@@ -1,11 +1,24 @@
 import React from 'react';
 import { DndContext, DragEndEvent, closestCorners, SensorDescriptor } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
-import { Pin, Trash2, CheckSquare, Upload, Search, X } from 'lucide-react';
+import { Pin, Trash2, CheckSquare, Upload, Search, X, RefreshCw } from 'lucide-react';
 import { Category, LinkItem } from '../../types';
 import Icon from '../ui/Icon';
 import LinkCard from '../ui/LinkCard';
 import SortableLinkCard from '../ui/SortableLinkCard';
+import { useDialog } from '../ui/DialogProvider';
+
+interface HitokotoPayload {
+  hitokoto: string;
+  from?: string;
+  from_who?: string | null;
+}
+
+const HITOKOTO_CACHE_KEY = 'ynav_hitokoto_cache_v1';
+
+const getTodayKey = () => {
+  return new Date().toLocaleDateString('sv-SE');
+};
 
 interface LinkSectionsProps {
   linksCount: number;
@@ -93,6 +106,10 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
   const showPinnedSection = pinnedLinks.length > 0 && !searchQuery && (selectedCategory === 'all');
   const showMainSection = (selectedCategory !== 'all' || searchQuery);
   const gridClassName = 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5';
+  const { notify } = useDialog();
+  const [hitokoto, setHitokoto] = React.useState<HitokotoPayload | null>(null);
+  const [isHitokotoLoading, setIsHitokotoLoading] = React.useState(false);
+  const hitokotoFetchingRef = React.useRef(false);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -103,10 +120,93 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
     return '晚上好';
   };
 
+  const readHitokotoCache = () => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = window.localStorage.getItem(HITOKOTO_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { date?: string; data?: HitokotoPayload };
+      if (!parsed?.date || !parsed?.data?.hitokoto) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  const writeHitokotoCache = (payload: HitokotoPayload) => {
+    if (typeof window === 'undefined') return;
+    const cache = { date: getTodayKey(), data: payload };
+    window.localStorage.setItem(HITOKOTO_CACHE_KEY, JSON.stringify(cache));
+  };
+
+  const fetchHitokoto = React.useCallback(async (notifyOnError = false) => {
+    if (hitokotoFetchingRef.current) return;
+    hitokotoFetchingRef.current = true;
+    setIsHitokotoLoading(true);
+    try {
+      const response = await fetch('https://v1.hitokoto.cn');
+      if (!response.ok) {
+        throw new Error(`Hitokoto request failed: ${response.status}`);
+      }
+      const payload = (await response.json()) as HitokotoPayload;
+      if (!payload?.hitokoto) {
+        throw new Error('Hitokoto payload missing text');
+      }
+      const normalized = {
+        hitokoto: payload.hitokoto,
+        from: payload.from,
+        from_who: payload.from_who ?? null
+      };
+      setHitokoto(normalized);
+      writeHitokotoCache(normalized);
+    } catch (error) {
+      if (notifyOnError) {
+        notify('获取一言失败，请稍后再试。', 'warning');
+      }
+    } finally {
+      hitokotoFetchingRef.current = false;
+      setIsHitokotoLoading(false);
+    }
+  }, [notify]);
+
+  React.useEffect(() => {
+    const cache = readHitokotoCache();
+    const todayKey = getTodayKey();
+    if (cache?.data) {
+      setHitokoto(cache.data);
+    }
+    if (!cache || cache.date !== todayKey) {
+      fetchHitokoto(false);
+    }
+  }, [fetchHitokoto]);
+
+  const hitokotoAuthor = React.useMemo(() => {
+    if (!hitokoto) return '';
+    const from = hitokoto.from?.trim();
+    const fromWho = hitokoto.from_who?.trim();
+    if (from && fromWho) return `${from} · ${fromWho}`;
+    if (from) return from;
+    if (fromWho) return fromWho;
+    return '佚名';
+  }, [hitokoto]);
+
+  const hitokotoText = hitokoto?.hitokoto?.trim() || '';
+
+  const handleCopyHitokoto = async () => {
+    if (!hitokotoText) return;
+    const textToCopy = hitokotoAuthor ? `${hitokotoText} — ${hitokotoAuthor}` : hitokotoText;
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      notify('已复制到剪贴板', 'success');
+    } catch (error) {
+      notify('复制失败，请手动复制。', 'warning');
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto px-4 lg:px-8 pb-0 scrollbar-hide">
       {/* Content wrapper with max-width - Added min-h and flex to push footer to bottom */}
-      <div className="max-w-[1600px] mx-auto min-h-[calc(100vh-48px)] flex flex-col">
+      <div className="max-w-[1600px] mx-auto min-h-full flex flex-col">
 
 
         {/* Dashboard Header / Greeting */}
@@ -346,27 +446,35 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
         )}
 
         {/* Footer - Pushed to bottom */}
-        <footer className="mt-auto pt-6 pb-3 text-center animate-in fade-in duration-700 delay-300">
-          <div className="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 backdrop-blur-sm shadow-sm transition-all hover:shadow-md hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800">
-            <span className="flex items-center gap-1.5 bg-gradient-to-r from-accent to-purple-500 bg-clip-text text-transparent text-xs font-bold font-mono">
-              元启 <span className="text-slate-300 dark:text-slate-600 font-light">|</span> v{__APP_VERSION__}
-            </span>
-            <span className="w-px h-3 bg-slate-200 dark:bg-slate-700"></span>
-            <a
-              href="https://github.com/yml2213/Y-Nav.git"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-accent font-medium transition-colors"
+        <footer className="mt-auto pt-6 pb-3 flex justify-center animate-in fade-in duration-700 delay-300">
+          <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
+            <button
+              type="button"
+              onClick={handleCopyHitokoto}
+              className="flex min-w-0 max-w-[70vw] items-center gap-1.5 text-left hover:text-slate-500 dark:hover:text-slate-300 transition-colors"
+              title={hitokotoText || '一言获取中'}
+              aria-label="点击复制一言"
             >
-              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current" aria-hidden="true">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-              </svg>
-              GitHub
-            </a>
+              <span className="truncate">
+                {hitokotoText || (isHitokotoLoading ? '一言获取中…' : '点击刷新获取一言')}
+              </span>
+              {hitokotoText && (
+                <span className="shrink-0 text-slate-400/80 dark:text-slate-500">
+                  — {hitokotoAuthor}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => fetchHitokoto(true)}
+              className="h-6 w-6 inline-flex items-center justify-center rounded-full text-slate-400 hover:text-slate-500 transition-colors disabled:opacity-60"
+              title="刷新一言"
+              aria-label="刷新一言"
+              disabled={isHitokotoLoading}
+            >
+              <RefreshCw size={13} className={isHitokotoLoading ? 'animate-spin' : ''} />
+            </button>
           </div>
-          <p className="mt-2.5 text-[10px] text-slate-400/80 dark:text-slate-500 font-medium tracking-wide">
-            Designed for Efficiency & Simplicity
-          </p>
         </footer>
       </div>
     </div>

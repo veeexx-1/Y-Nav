@@ -251,10 +251,20 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Footer Actions - Removed to avoid duplication with main footer */}
       {!isSidebarCollapsed && (
         <div className="px-3 pb-4 mt-auto">
-          {/* Only keep a minimal separator if needed, or nothing */}
+          <div className="flex w-full items-center justify-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="font-mono font-semibold">元启 v{__APP_VERSION__}</span>
+            <span className="text-slate-300 dark:text-slate-600">·</span>
+            <a
+              href={repoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            >
+              GitHub
+            </a>
+          </div>
         </div>
       )}
     </aside>
