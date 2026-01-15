@@ -31,7 +31,20 @@ import {
   buildSyncData
 } from './hooks';
 
-import { GITHUB_REPO_URL, SYNC_META_KEY, getDeviceId } from './utils/constants';
+import {
+  GITHUB_REPO_URL,
+  PRIVATE_CATEGORY_ID,
+  PRIVATE_VAULT_KEY,
+  PRIVACY_PASSWORD_KEY,
+  PRIVACY_AUTO_UNLOCK_KEY,
+  PRIVACY_GROUP_ENABLED_KEY,
+  PRIVACY_SESSION_UNLOCKED_KEY,
+  PRIVACY_USE_SEPARATE_PASSWORD_KEY,
+  SYNC_META_KEY,
+  SYNC_PASSWORD_KEY,
+  getDeviceId
+} from './utils/constants';
+import { decryptPrivateVault, encryptPrivateVault } from './utils/privateVault';
 
 function App() {
   // === Core Data ===
@@ -51,10 +64,23 @@ function App() {
   } = useDataStore();
   const { notify, confirm } = useDialog();
 
+  // === Private Vault ===
+  const [privateVaultCipher, setPrivateVaultCipher] = useState<string | null>(null);
+  const [privateLinks, setPrivateLinks] = useState<LinkItem[]>([]);
+  const [isPrivateUnlocked, setIsPrivateUnlocked] = useState(false);
+  const [privateVaultPassword, setPrivateVaultPassword] = useState<string | null>(null);
+  const [useSeparatePrivacyPassword, setUseSeparatePrivacyPassword] = useState(false);
+  const [privacyGroupEnabled, setPrivacyGroupEnabled] = useState(false);
+  const [privacyAutoUnlockEnabled, setPrivacyAutoUnlockEnabled] = useState(false);
+  const [isPrivateModalOpen, setIsPrivateModalOpen] = useState(false);
+  const [editingPrivateLink, setEditingPrivateLink] = useState<LinkItem | null>(null);
+  const [prefillPrivateLink, setPrefillPrivateLink] = useState<Partial<LinkItem> | null>(null);
+
   // === Sync Engine ===
   const [syncConflictOpen, setSyncConflictOpen] = useState(false);
   const [currentConflict, setCurrentConflict] = useState<SyncConflict | null>(null);
   const hasInitialSyncRun = useRef(false);
+  const autoUnlockAttemptedRef = useRef(false);
   const getLocalSyncMeta = useCallback(() => {
     const stored = localStorage.getItem(SYNC_META_KEY);
     if (!stored) return null;
@@ -63,6 +89,13 @@ function App() {
     } catch {
       return null;
     }
+  }, []);
+
+  useEffect(() => {
+    setPrivateVaultCipher(localStorage.getItem(PRIVATE_VAULT_KEY));
+    setUseSeparatePrivacyPassword(localStorage.getItem(PRIVACY_USE_SEPARATE_PASSWORD_KEY) === '1');
+    setPrivacyGroupEnabled(localStorage.getItem(PRIVACY_GROUP_ENABLED_KEY) === '1');
+    setPrivacyAutoUnlockEnabled(localStorage.getItem(PRIVACY_AUTO_UNLOCK_KEY) === '1');
   }, []);
 
   // === Theme ===
@@ -81,6 +114,14 @@ function App() {
     handleCategoryClick,
     selectAll
   } = useSidebar();
+
+  const privateCategory = useMemo(() => ({
+    id: PRIVATE_CATEGORY_ID,
+    name: '隐私分组',
+    icon: 'Lock'
+  }), []);
+
+  const privateCategories = useMemo(() => [privateCategory], [privateCategory]);
 
   // === Config (AI, Site Settings) ===
   const {
@@ -114,7 +155,21 @@ function App() {
     if (data.siteSettings) {
       restoreSiteSettings(data.siteSettings);
     }
-  }, [updateData, restoreAIConfig, restoreSiteSettings]);
+    if (typeof data.privateVault === 'string') {
+      setPrivateVaultCipher(data.privateVault);
+      localStorage.setItem(PRIVATE_VAULT_KEY, data.privateVault);
+      if (isPrivateUnlocked && privateVaultPassword) {
+        decryptPrivateVault(privateVaultPassword, data.privateVault)
+          .then(payload => setPrivateLinks(payload.links || []))
+          .catch(() => {
+            setIsPrivateUnlocked(false);
+            setPrivateLinks([]);
+            setPrivateVaultPassword(null);
+            notify('隐私分组已锁定，请重新解锁', 'warning');
+          });
+      }
+    }
+  }, [updateData, restoreAIConfig, restoreSiteSettings, isPrivateUnlocked, notify, privateVaultPassword]);
 
   const handleSyncError = useCallback((error: string) => {
     console.error('[Sync Error]', error);
@@ -177,6 +232,152 @@ function App() {
     setIsSearchConfigModalOpen
   } = useModals();
 
+  const isPrivateView = selectedCategory === PRIVATE_CATEGORY_ID;
+
+  const resolvePrivacyPassword = useCallback((input?: string) => {
+    const trimmed = input?.trim();
+    if (trimmed) return trimmed;
+    if (useSeparatePrivacyPassword) {
+      return (localStorage.getItem(PRIVACY_PASSWORD_KEY) || '').trim();
+    }
+    return (localStorage.getItem(SYNC_PASSWORD_KEY) || '').trim();
+  }, [useSeparatePrivacyPassword]);
+
+  const handleUnlockPrivateVault = useCallback(async (input?: string) => {
+    const password = resolvePrivacyPassword(input);
+    if (!password) {
+      notify('请先输入隐私分组密码', 'warning');
+      return false;
+    }
+
+    if (!useSeparatePrivacyPassword) {
+      const syncPassword = (localStorage.getItem(SYNC_PASSWORD_KEY) || '').trim();
+      if (!syncPassword) {
+        notify('请先设置同步密码，再解锁隐私分组', 'warning');
+        return false;
+      }
+      if (password !== syncPassword) {
+        notify('同步密码不匹配，请重新输入', 'error');
+        return false;
+      }
+    }
+
+    if (!privateVaultCipher) {
+      setPrivateLinks([]);
+      setIsPrivateUnlocked(true);
+      setPrivateVaultPassword(password);
+      if (privacyAutoUnlockEnabled) {
+        sessionStorage.setItem(PRIVACY_SESSION_UNLOCKED_KEY, '1');
+      }
+      return true;
+    }
+
+    try {
+      const payload = await decryptPrivateVault(password, privateVaultCipher);
+      setPrivateLinks(payload.links || []);
+      setIsPrivateUnlocked(true);
+      setPrivateVaultPassword(password);
+      if (privacyAutoUnlockEnabled) {
+        sessionStorage.setItem(PRIVACY_SESSION_UNLOCKED_KEY, '1');
+      }
+      return true;
+    } catch (error) {
+      notify('密码错误或隐私数据已损坏', 'error');
+      return false;
+    }
+  }, [privateVaultCipher, notify, resolvePrivacyPassword, useSeparatePrivacyPassword, privacyAutoUnlockEnabled]);
+
+  const persistPrivateVault = useCallback(async (nextLinks: LinkItem[], passwordOverride?: string) => {
+    const password = (passwordOverride || privateVaultPassword || resolvePrivacyPassword()).trim();
+    if (!password) {
+      notify('请先设置隐私分组密码', 'warning');
+      return false;
+    }
+
+    try {
+      const cipher = await encryptPrivateVault(password, { links: nextLinks });
+      localStorage.setItem(PRIVATE_VAULT_KEY, cipher);
+      setPrivateVaultCipher(cipher);
+      setPrivateLinks(nextLinks);
+      setIsPrivateUnlocked(true);
+      setPrivateVaultPassword(password);
+      return true;
+    } catch (error) {
+      notify('隐私分组加密失败，请重试', 'error');
+      return false;
+    }
+  }, [notify, privateVaultPassword, resolvePrivacyPassword]);
+
+  const handleMigratePrivacyMode = useCallback(async (payload: {
+    useSeparatePassword: boolean;
+    oldPassword: string;
+    newPassword: string;
+  }) => {
+    const { useSeparatePassword, oldPassword, newPassword } = payload;
+    const trimmedOld = oldPassword.trim();
+    const trimmedNew = newPassword.trim();
+    const syncPassword = (localStorage.getItem(SYNC_PASSWORD_KEY) || '').trim();
+
+    if (!trimmedOld || !trimmedNew) {
+      notify('请填写旧密码和新密码', 'warning');
+      return false;
+    }
+
+    if (useSeparatePassword && !syncPassword) {
+      notify('请先设置同步密码，再启用独立密码模式', 'warning');
+      return false;
+    }
+
+    if (!useSeparatePassword && trimmedNew !== syncPassword) {
+      notify('切换回同步密码时，新密码必须与同步密码一致', 'warning');
+      return false;
+    }
+
+    const expectedOld = useSeparatePrivacyPassword
+      ? (localStorage.getItem(PRIVACY_PASSWORD_KEY) || '').trim()
+      : syncPassword;
+
+    if (expectedOld && trimmedOld !== expectedOld) {
+      notify('旧密码不正确', 'error');
+      return false;
+    }
+
+    let nextLinks: LinkItem[] = privateLinks;
+    if (privateVaultCipher) {
+      try {
+        const payloadData = await decryptPrivateVault(trimmedOld, privateVaultCipher);
+        nextLinks = payloadData.links || [];
+      } catch (error) {
+        notify('旧密码不正确或隐私数据已损坏', 'error');
+        return false;
+      }
+    }
+
+    if (privateVaultCipher || nextLinks.length > 0) {
+      const cipher = await encryptPrivateVault(trimmedNew, { links: nextLinks });
+      localStorage.setItem(PRIVATE_VAULT_KEY, cipher);
+      setPrivateVaultCipher(cipher);
+    } else {
+      localStorage.removeItem(PRIVATE_VAULT_KEY);
+      setPrivateVaultCipher(null);
+    }
+
+    if (useSeparatePassword) {
+      localStorage.setItem(PRIVACY_PASSWORD_KEY, trimmedNew);
+      localStorage.setItem(PRIVACY_USE_SEPARATE_PASSWORD_KEY, '1');
+    } else {
+      localStorage.removeItem(PRIVACY_PASSWORD_KEY);
+      localStorage.setItem(PRIVACY_USE_SEPARATE_PASSWORD_KEY, '0');
+    }
+
+    setUseSeparatePrivacyPassword(useSeparatePassword);
+    setPrivateLinks(nextLinks);
+    setIsPrivateUnlocked(true);
+    setPrivateVaultPassword(trimmedNew);
+    notify('隐私分组已完成迁移', 'success');
+    return true;
+  }, [notify, privateLinks, privateVaultCipher, useSeparatePrivacyPassword]);
+
   // === Computed: Displayed Links ===
   const pinnedLinks = useMemo(() => {
     const filteredPinnedLinks = links.filter(l => l.pinned);
@@ -204,7 +405,7 @@ function App() {
     }
 
     // Category Filter
-    if (selectedCategory !== 'all') {
+    if (selectedCategory !== 'all' && selectedCategory !== PRIVATE_CATEGORY_ID) {
       result = result.filter(l => l.categoryId === selectedCategory);
     }
 
@@ -215,6 +416,27 @@ function App() {
       return aOrder - bOrder;
     });
   }, [links, selectedCategory, searchQuery]);
+
+  const displayedPrivateLinks = useMemo(() => {
+    let result = privateLinks;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(l =>
+        l.title.toLowerCase().includes(q) ||
+        l.url.toLowerCase().includes(q) ||
+        (l.description && l.description.toLowerCase().includes(q))
+      );
+    }
+
+    return result.slice().sort((a, b) => {
+      const aOrder = a.order !== undefined ? a.order : a.createdAt;
+      const bOrder = b.order !== undefined ? b.order : b.createdAt;
+      return aOrder - bOrder;
+    });
+  }, [privateLinks, searchQuery]);
+
+  const activeDisplayedLinks = isPrivateView ? displayedPrivateLinks : displayedLinks;
 
   // === Batch Edit ===
   const {
@@ -232,6 +454,17 @@ function App() {
     displayedLinks,
     updateData
   });
+
+  const emptySelection = useMemo(() => new Set<string>(), []);
+  const effectiveIsBatchEditMode = isPrivateView ? false : isBatchEditMode;
+  const effectiveSelectedLinks = isPrivateView ? emptySelection : selectedLinks;
+  const effectiveSelectedLinksCount = isPrivateView ? 0 : selectedLinks.size;
+  const effectiveToggleBatchEditMode = isPrivateView ? () => {} : toggleBatchEditMode;
+  const effectiveSelectAll = isPrivateView ? () => {} : handleSelectAll;
+  const effectiveBatchDelete = isPrivateView ? () => {} : handleBatchDelete;
+  const effectiveBatchPin = isPrivateView ? () => {} : handleBatchPin;
+  const effectiveBatchMove = isPrivateView ? () => {} : handleBatchMove;
+  const handleLinkSelect = isPrivateView ? () => {} : toggleLinkSelection;
 
   // === Context Menu ===
   const {
@@ -277,7 +510,9 @@ function App() {
 
   // === Computed: Sorting States ===
   const canSortPinned = selectedCategory === 'all' && !searchQuery && pinnedLinks.length > 1;
-  const canSortCategory = selectedCategory !== 'all' && displayedLinks.length > 1;
+  const canSortCategory = selectedCategory !== 'all'
+    && selectedCategory !== PRIVATE_CATEGORY_ID
+    && displayedLinks.length > 1;
 
   // === Computed: Link Counts ===
   const linkCounts = useMemo(() => {
@@ -303,6 +538,30 @@ function App() {
 
     return counts;
   }, [links, categories]);
+
+  const privateCount = privacyGroupEnabled && isPrivateUnlocked ? privateLinks.length : 0;
+  const privateUnlockHint = useSeparatePrivacyPassword
+    ? '请输入独立密码解锁隐私分组'
+    : '请输入同步密码解锁隐私分组';
+  const privateUnlockSubHint = useSeparatePrivacyPassword
+    ? '独立密码仅保存在本地，切换设备需手动输入'
+    : '同步密码来自数据设置';
+
+  useEffect(() => {
+    if (!privacyGroupEnabled || !privacyAutoUnlockEnabled || isPrivateUnlocked) return;
+    if (sessionStorage.getItem(PRIVACY_SESSION_UNLOCKED_KEY) !== '1') return;
+    if (autoUnlockAttemptedRef.current) return;
+    autoUnlockAttemptedRef.current = true;
+    handleUnlockPrivateVault().then((success) => {
+      if (!success) {
+        sessionStorage.removeItem(PRIVACY_SESSION_UNLOCKED_KEY);
+      }
+    });
+  }, [privacyGroupEnabled, privacyAutoUnlockEnabled, isPrivateUnlocked, handleUnlockPrivateVault]);
+
+  useEffect(() => {
+    autoUnlockAttemptedRef.current = false;
+  }, [privacyGroupEnabled, privacyAutoUnlockEnabled]);
 
   // === Handlers ===
   const handleImportConfirm = (newLinks: LinkItem[], newCategories: Category[]) => {
@@ -336,6 +595,106 @@ function App() {
     }
   };
 
+  const closePrivateModal = useCallback(() => {
+    setIsPrivateModalOpen(false);
+    setEditingPrivateLink(null);
+    setPrefillPrivateLink(null);
+  }, []);
+
+  const openPrivateAddModal = useCallback(() => {
+    if (!isPrivateUnlocked) {
+      notify('请先解锁隐私分组', 'warning');
+      return;
+    }
+    setEditingPrivateLink(null);
+    setPrefillPrivateLink(null);
+    setIsPrivateModalOpen(true);
+  }, [isPrivateUnlocked, notify]);
+
+  const openPrivateEditModal = useCallback((link: LinkItem) => {
+    if (!isPrivateUnlocked) {
+      notify('请先解锁隐私分组', 'warning');
+      return;
+    }
+    setEditingPrivateLink(link);
+    setIsPrivateModalOpen(true);
+  }, [isPrivateUnlocked, notify]);
+
+  const handlePrivateAddLink = useCallback(async (data: Omit<LinkItem, 'id' | 'createdAt'>) => {
+    if (!isPrivateUnlocked) {
+      notify('请先解锁隐私分组', 'warning');
+      return;
+    }
+    const maxOrder = privateLinks.reduce((max, link) => {
+      const order = link.order !== undefined ? link.order : link.createdAt;
+      return Math.max(max, order);
+    }, -1);
+    const newLink: LinkItem = {
+      ...data,
+      id: Date.now().toString(),
+      createdAt: Date.now(),
+      categoryId: PRIVATE_CATEGORY_ID,
+      pinned: false,
+      pinnedOrder: undefined,
+      order: maxOrder + 1
+    };
+    await persistPrivateVault([...privateLinks, newLink]);
+  }, [isPrivateUnlocked, notify, persistPrivateVault, privateLinks]);
+
+  const handlePrivateEditLink = useCallback(async (data: Omit<LinkItem, 'createdAt'>) => {
+    if (!isPrivateUnlocked) {
+      notify('请先解锁隐私分组', 'warning');
+      return;
+    }
+    const updatedLinks = privateLinks.map(link => link.id === data.id ? {
+      ...link,
+      ...data,
+      categoryId: PRIVATE_CATEGORY_ID,
+      pinned: false,
+      pinnedOrder: undefined
+    } : link);
+    await persistPrivateVault(updatedLinks);
+  }, [isPrivateUnlocked, notify, persistPrivateVault, privateLinks]);
+
+  const handlePrivateDeleteLink = useCallback(async (id: string) => {
+    if (!isPrivateUnlocked) {
+      notify('请先解锁隐私分组', 'warning');
+      return;
+    }
+    const shouldDelete = await confirm({
+      title: '删除隐私链接',
+      message: '确定删除此隐私链接吗？',
+      confirmText: '删除',
+      cancelText: '取消',
+      variant: 'danger'
+    });
+
+    if (!shouldDelete) return;
+    const updated = privateLinks.filter(link => link.id !== id);
+    await persistPrivateVault(updated);
+  }, [confirm, isPrivateUnlocked, notify, persistPrivateVault, privateLinks]);
+
+  const handleAddLinkRequest = useCallback(() => {
+    if (isPrivateView) {
+      openPrivateAddModal();
+      return;
+    }
+    openAddLinkModal();
+  }, [isPrivateView, openPrivateAddModal, openAddLinkModal]);
+
+  const handleLinkEdit = useCallback((link: LinkItem) => {
+    if (isPrivateView) {
+      openPrivateEditModal(link);
+      return;
+    }
+    openEditLinkModal(link);
+  }, [isPrivateView, openEditLinkModal, openPrivateEditModal]);
+
+  const handleLinkContextMenu = useCallback((event: React.MouseEvent, link: LinkItem) => {
+    if (isPrivateView) return;
+    handleContextMenu(event, link);
+  }, [handleContextMenu, isPrivateView]);
+
   const togglePin = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -350,6 +709,43 @@ function App() {
     deleteCategoryStore(catId);
   };
 
+  const handleTogglePrivacyGroup = useCallback((enabled: boolean) => {
+    setPrivacyGroupEnabled(enabled);
+    localStorage.setItem(PRIVACY_GROUP_ENABLED_KEY, enabled ? '1' : '0');
+
+    if (!enabled) {
+      sessionStorage.removeItem(PRIVACY_SESSION_UNLOCKED_KEY);
+      if (selectedCategory === PRIVATE_CATEGORY_ID) {
+        setSelectedCategory('all');
+      }
+      setIsPrivateUnlocked(false);
+      setPrivateVaultPassword(null);
+      setPrivateLinks([]);
+      setIsPrivateModalOpen(false);
+      setEditingPrivateLink(null);
+      setPrefillPrivateLink(null);
+    }
+  }, [selectedCategory, setSelectedCategory]);
+
+  const handleTogglePrivacyAutoUnlock = useCallback((enabled: boolean) => {
+    setPrivacyAutoUnlockEnabled(enabled);
+    localStorage.setItem(PRIVACY_AUTO_UNLOCK_KEY, enabled ? '1' : '0');
+    if (!enabled) {
+      sessionStorage.removeItem(PRIVACY_SESSION_UNLOCKED_KEY);
+    } else if (isPrivateUnlocked) {
+      sessionStorage.setItem(PRIVACY_SESSION_UNLOCKED_KEY, '1');
+    }
+  }, [isPrivateUnlocked]);
+
+  const handleSelectPrivate = useCallback(() => {
+    if (!privacyGroupEnabled) {
+      notify('隐私分组已关闭，可在设置中开启', 'warning');
+      return;
+    }
+    setSelectedCategory(PRIVATE_CATEGORY_ID);
+    setSidebarOpen(false);
+  }, [notify, privacyGroupEnabled, setSelectedCategory, setSidebarOpen]);
+
   // === Bookmarklet URL Handler ===
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -357,6 +753,21 @@ function App() {
     if (addUrl) {
       const addTitle = urlParams.get('add_title') || '';
       window.history.replaceState({}, '', window.location.pathname);
+      if (selectedCategory === PRIVATE_CATEGORY_ID) {
+        if (!isPrivateUnlocked) {
+          notify('请先解锁隐私分组', 'warning');
+          return;
+        }
+        setPrefillPrivateLink({
+          title: addTitle,
+          url: addUrl,
+          categoryId: PRIVATE_CATEGORY_ID
+        });
+        setEditingPrivateLink(null);
+        openPrivateAddModal();
+        return;
+      }
+
       const fallbackCategoryId = selectedCategory !== 'all'
         ? selectedCategory
         : (categories.find(c => c.id === 'common')?.id || categories[0]?.id || 'common');
@@ -368,7 +779,18 @@ function App() {
       setEditingLink(undefined);
       openAddLinkModal();
     }
-  }, [setPrefillLink, setEditingLink, openAddLinkModal, categories, selectedCategory]);
+  }, [
+    setPrefillLink,
+    setEditingLink,
+    openAddLinkModal,
+    categories,
+    selectedCategory,
+    notify,
+    isPrivateUnlocked,
+    openPrivateAddModal,
+    setPrefillPrivateLink,
+    setEditingPrivateLink
+  ]);
 
   // === Appearance Setup ===
   useEffect(() => {
@@ -410,7 +832,8 @@ function App() {
             categories,
             { mode: searchMode, externalSources: externalSearchSources },
             aiConfig,
-            siteSettings
+            siteSettings,
+            privateVaultCipher || undefined
           );
           handleSyncConflict({
             localData: { ...localData, meta: { updatedAt: localUpdatedAt, deviceId: localDeviceId, version: localVersion } },
@@ -421,7 +844,7 @@ function App() {
     };
 
     checkCloudData();
-  }, [isLoaded, pullFromCloud, links, categories, searchMode, externalSearchSources, aiConfig, siteSettings, buildSyncData, handleSyncConflict, getLocalSyncMeta]);
+  }, [isLoaded, pullFromCloud, links, categories, searchMode, externalSearchSources, aiConfig, siteSettings, privateVaultCipher, buildSyncData, handleSyncConflict, getLocalSyncMeta]);
 
   // === KV Sync: Auto-sync on data change ===
   const prevSyncDataRef = useRef<string | null>(null);
@@ -435,7 +858,8 @@ function App() {
       categories,
       { mode: searchMode, externalSources: externalSearchSources },
       aiConfig,
-      siteSettings
+      siteSettings,
+      privateVaultCipher || undefined
     );
     const serialized = JSON.stringify(syncData);
 
@@ -443,7 +867,7 @@ function App() {
       prevSyncDataRef.current = serialized;
       schedulePush(syncData);
     }
-  }, [links, categories, isLoaded, searchMode, externalSearchSources, aiConfig, siteSettings, schedulePush, buildSyncData, currentConflict]);
+  }, [links, categories, isLoaded, searchMode, externalSearchSources, aiConfig, siteSettings, privateVaultCipher, schedulePush, buildSyncData, currentConflict]);
 
   // === Sync Conflict Resolution ===
   const handleResolveConflict = useCallback((choice: 'local' | 'remote') => {
@@ -463,10 +887,11 @@ function App() {
       categories,
       { mode: searchMode, externalSources: externalSearchSources },
       aiConfig,
-      siteSettings
+      siteSettings,
+      privateVaultCipher || undefined
     );
     await pushToCloud(syncData);
-  }, [links, categories, searchMode, externalSearchSources, aiConfig, siteSettings, pushToCloud]);
+  }, [links, categories, searchMode, externalSearchSources, aiConfig, siteSettings, privateVaultCipher, pushToCloud]);
 
   const handleCreateBackup = useCallback(async () => {
     const syncData = buildSyncData(
@@ -474,7 +899,8 @@ function App() {
       categories,
       { mode: searchMode, externalSources: externalSearchSources },
       aiConfig,
-      siteSettings
+      siteSettings,
+      privateVaultCipher || undefined
     );
     const success = await createBackup(syncData);
     if (success) {
@@ -483,7 +909,7 @@ function App() {
       notify('备份失败，请稍后重试', 'error');
     }
     return success;
-  }, [links, categories, searchMode, externalSearchSources, aiConfig, siteSettings, createBackup, notify]);
+  }, [links, categories, searchMode, externalSearchSources, aiConfig, siteSettings, privateVaultCipher, createBackup, notify]);
 
   const handleManualPull = useCallback(async () => {
     const localMeta = getLocalSyncMeta();
@@ -498,7 +924,8 @@ function App() {
           categories,
           { mode: searchMode, externalSources: externalSearchSources },
           aiConfig,
-          siteSettings
+          siteSettings,
+          privateVaultCipher || undefined
         );
         handleSyncConflict({
           localData: { ...localData, meta: { updatedAt: localUpdatedAt, deviceId: localDeviceId, version: localVersion } },
@@ -508,7 +935,7 @@ function App() {
       }
       handleSyncComplete(cloudData);
     }
-  }, [pullFromCloud, handleSyncComplete, getLocalSyncMeta, links, categories, searchMode, externalSearchSources, aiConfig, siteSettings, buildSyncData, handleSyncConflict]);
+  }, [pullFromCloud, handleSyncComplete, getLocalSyncMeta, links, categories, searchMode, externalSearchSources, aiConfig, siteSettings, privateVaultCipher, buildSyncData, handleSyncConflict]);
 
   const handleRestoreBackup = useCallback(async (backupKey: string) => {
     const confirmed = await confirm({
@@ -532,7 +959,8 @@ function App() {
       restoredData.categories,
       restoredData.searchConfig,
       restoredData.aiConfig,
-      restoredData.siteSettings
+      restoredData.siteSettings,
+      restoredData.privateVault
     ));
     notify('已恢复到所选备份，并创建回滚点', 'success');
     return true;
@@ -574,6 +1002,12 @@ function App() {
           onOpenImport={() => setIsImportModalOpen(true)}
           onCreateBackup={handleCreateBackup}
           onRestoreBackup={handleRestoreBackup}
+          useSeparatePrivacyPassword={useSeparatePrivacyPassword}
+          onMigratePrivacyMode={handleMigratePrivacyMode}
+          privacyGroupEnabled={privacyGroupEnabled}
+          onTogglePrivacyGroup={handleTogglePrivacyGroup}
+          privacyAutoUnlockEnabled={privacyAutoUnlockEnabled}
+          onTogglePrivacyAutoUnlock={handleTogglePrivacyAutoUnlock}
           closeOnBackdrop={closeOnBackdrop}
         />
 
@@ -623,9 +1057,13 @@ function App() {
         selectedCategory={selectedCategory}
         categories={categories}
         linkCounts={linkCounts}
+        privacyGroupEnabled={privacyGroupEnabled}
+        isPrivateUnlocked={isPrivateUnlocked}
+        privateCount={privateCount}
         repoUrl={GITHUB_REPO_URL}
         onSelectAll={selectAll}
         onSelectCategory={handleCategoryClick}
+        onSelectPrivate={handleSelectPrivate}
         onToggleCollapsed={toggleSidebarCollapsed}
         onOpenCategoryManager={() => setIsCatManagerOpen(true)}
         onOpenImport={() => setIsImportModalOpen(true)}
@@ -715,19 +1153,23 @@ function App() {
             onToggleMobileSearch={toggleMobileSearch}
             onToggleSearchSourcePopup={() => setShowSearchSourcePopup(prev => !prev)}
             onStartPinnedSorting={startPinnedSorting}
-            onStartCategorySorting={() => startSorting(selectedCategory)}
+            onStartCategorySorting={() => {
+              if (!isPrivateView) {
+                startSorting(selectedCategory);
+              }
+            }}
             onSavePinnedSorting={savePinnedSorting}
             onCancelPinnedSorting={cancelPinnedSorting}
             onSaveCategorySorting={saveSorting}
             onCancelCategorySorting={cancelSorting}
-            onAddLink={openAddLinkModal}
+            onAddLink={handleAddLinkRequest}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
           />
 
           <LinkSections
             linksCount={links.length}
             pinnedLinks={pinnedLinks}
-            displayedLinks={displayedLinks}
+            displayedLinks={activeDisplayedLinks}
             selectedCategory={selectedCategory}
             searchQuery={searchQuery}
             categories={categories}
@@ -735,21 +1177,25 @@ function App() {
             siteCardStyle={siteSettings.cardStyle}
             isSortingPinned={isSortingPinned}
             isSortingMode={isSortingMode}
-            isBatchEditMode={isBatchEditMode}
-            selectedLinksCount={selectedLinks.size}
+            isBatchEditMode={effectiveIsBatchEditMode}
+            selectedLinksCount={effectiveSelectedLinksCount}
             sensors={sensors}
             onPinnedDragEnd={handlePinnedDragEnd}
             onDragEnd={handleDragEnd}
-            onToggleBatchEditMode={toggleBatchEditMode}
-            onBatchDelete={handleBatchDelete}
-            onBatchPin={handleBatchPin}
-            onSelectAll={handleSelectAll}
-            onBatchMove={handleBatchMove}
-            onAddLink={openAddLinkModal}
-            selectedLinks={selectedLinks}
-            onLinkSelect={toggleLinkSelection}
-            onLinkContextMenu={handleContextMenu}
-            onLinkEdit={openEditLinkModal}
+            onToggleBatchEditMode={effectiveToggleBatchEditMode}
+            onBatchDelete={effectiveBatchDelete}
+            onBatchPin={effectiveBatchPin}
+            onSelectAll={effectiveSelectAll}
+            onBatchMove={effectiveBatchMove}
+            onAddLink={handleAddLinkRequest}
+            selectedLinks={effectiveSelectedLinks}
+            onLinkSelect={handleLinkSelect}
+            onLinkContextMenu={handleLinkContextMenu}
+            onLinkEdit={handleLinkEdit}
+            isPrivateUnlocked={isPrivateUnlocked}
+            onPrivateUnlock={handleUnlockPrivateVault}
+            privateUnlockHint={privateUnlockHint}
+            privateUnlockSubHint={privateUnlockSubHint}
           />
         </div>
       </main>
@@ -764,7 +1210,18 @@ function App() {
           categories={categories}
           initialData={editingLink || (prefillLink as LinkItem)}
           aiConfig={aiConfig}
-          defaultCategoryId={selectedCategory !== 'all' ? selectedCategory : undefined}
+          defaultCategoryId={selectedCategory !== 'all' && selectedCategory !== PRIVATE_CATEGORY_ID ? selectedCategory : undefined}
+          closeOnBackdrop={closeOnBackdrop}
+        />
+        <LinkModal
+          isOpen={isPrivateModalOpen}
+          onClose={closePrivateModal}
+          onSave={editingPrivateLink ? handlePrivateEditLink : handlePrivateAddLink}
+          onDelete={editingPrivateLink ? handlePrivateDeleteLink : undefined}
+          categories={privateCategories}
+          initialData={editingPrivateLink || (prefillPrivateLink as LinkItem)}
+          aiConfig={aiConfig}
+          defaultCategoryId={PRIVATE_CATEGORY_ID}
           closeOnBackdrop={closeOnBackdrop}
         />
       </Suspense>

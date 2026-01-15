@@ -2,6 +2,7 @@ import React from 'react';
 import { Settings, ChevronLeft } from 'lucide-react';
 import { Category } from '../../types';
 import Icon from '../ui/Icon';
+import { PRIVATE_CATEGORY_ID } from '../../utils/constants';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -12,9 +13,13 @@ interface SidebarProps {
   selectedCategory: string;
   categories: Category[];
   linkCounts: Record<string, number>;
+  privacyGroupEnabled: boolean;
+  isPrivateUnlocked: boolean;
+  privateCount: number;
   repoUrl: string;
   onSelectAll: () => void;
   onSelectCategory: (category: Category) => void;
+  onSelectPrivate: () => void;
   onToggleCollapsed: () => void;
   onOpenCategoryManager: () => void;
   onOpenSettings: () => void;
@@ -29,9 +34,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   selectedCategory,
   categories,
   linkCounts,
+  privacyGroupEnabled,
+  isPrivateUnlocked,
+  privateCount,
   repoUrl,
   onSelectAll,
   onSelectCategory,
+  onSelectPrivate,
   onToggleCollapsed,
   onOpenCategoryManager,
   onOpenSettings
@@ -251,22 +260,54 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {!isSidebarCollapsed && (
-        <div className="px-3 pb-4 mt-auto">
-          <div className="flex w-full items-center justify-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-            <span className="font-mono font-semibold">元启 v{__APP_VERSION__}</span>
-            <span className="text-slate-300 dark:text-slate-600">·</span>
-            <a
-              href={repoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+      <div className="mt-auto">
+        {privacyGroupEnabled && (
+          <div className={`${isSidebarCollapsed ? 'px-2' : 'px-3'} pb-3`}>
+            <button
+              onClick={onSelectPrivate}
+              title="隐私分组"
+              className={`relative w-full rounded-xl transition-all duration-200 group ${isSidebarCollapsed ? 'flex items-center justify-center p-2.5' : 'flex items-center gap-3 px-3 py-2.5'} ${selectedCategory === PRIVATE_CATEGORY_ID
+                ? 'bg-gradient-to-r from-accent/20 via-accent/5 to-transparent text-accent shadow-sm border border-accent/10'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'
+                }`}
             >
-              GitHub
-            </a>
+              {!isSidebarCollapsed && selectedCategory === PRIVATE_CATEGORY_ID && (
+                <span className="absolute left-0.5 top-1/2 -translate-y-1/2 h-6 w-1 rounded-full bg-accent shadow-[0_0_8px_rgb(var(--accent-color)/0.4)]"></span>
+              )}
+              <div className={`flex items-center justify-center transition-colors ${isSidebarCollapsed ? 'p-2 rounded-lg' : 'p-1'} ${selectedCategory === PRIVATE_CATEGORY_ID ? 'text-accent' : 'text-slate-500 dark:text-slate-400'}`}>
+                <Icon name="Lock" size={18} />
+              </div>
+              {!isSidebarCollapsed && (
+                <>
+                  <span className="font-medium flex-1 text-left">隐私分组</span>
+                  {isPrivateUnlocked && privateCount > 0 && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${selectedCategory === PRIVATE_CATEGORY_ID ? 'bg-accent/20 text-accent' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-400 border border-slate-200/50 dark:border-slate-700/50'}`}>
+                      {privateCount}
+                    </span>
+                  )}
+                </>
+              )}
+            </button>
           </div>
-        </div>
-      )}
+        )}
+
+        {!isSidebarCollapsed && (
+          <div className="px-3 pb-4">
+            <div className="flex w-full items-center justify-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+              <span className="font-mono font-semibold">元启 v{__APP_VERSION__}</span>
+              <span className="text-slate-300 dark:text-slate-600">·</span>
+              <a
+                href={repoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              >
+                GitHub
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
     </aside>
   );
 };

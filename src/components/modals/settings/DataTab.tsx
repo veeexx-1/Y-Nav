@@ -7,6 +7,12 @@ interface DataTabProps {
     onClose: () => void;
     onCreateBackup: () => Promise<boolean>;
     onRestoreBackup: (backupKey: string) => Promise<boolean>;
+    useSeparatePrivacyPassword: boolean;
+    onMigratePrivacyMode: (payload: { useSeparatePassword: boolean; oldPassword: string; newPassword: string }) => Promise<boolean>;
+    privacyGroupEnabled: boolean;
+    onTogglePrivacyGroup: (enabled: boolean) => void;
+    privacyAutoUnlockEnabled: boolean;
+    onTogglePrivacyAutoUnlock: (enabled: boolean) => void;
 }
 
 interface BackupItem {
@@ -18,7 +24,18 @@ interface BackupItem {
     version?: number;
 }
 
-const DataTab: React.FC<DataTabProps> = ({ onOpenImport, onClose, onCreateBackup, onRestoreBackup }) => {
+const DataTab: React.FC<DataTabProps> = ({
+    onOpenImport,
+    onClose,
+    onCreateBackup,
+    onRestoreBackup,
+    useSeparatePrivacyPassword,
+    onMigratePrivacyMode,
+    privacyGroupEnabled,
+    onTogglePrivacyGroup,
+    privacyAutoUnlockEnabled,
+    onTogglePrivacyAutoUnlock
+}) => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [backups, setBackups] = useState<BackupItem[]>([]);
@@ -27,6 +44,13 @@ const DataTab: React.FC<DataTabProps> = ({ onOpenImport, onClose, onCreateBackup
     const [isCreatingBackup, setIsCreatingBackup] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
     const [restoringKey, setRestoringKey] = useState<string | null>(null);
+    const [privacyTarget, setPrivacyTarget] = useState<'sync' | 'separate' | null>(null);
+    const [privacyOldPassword, setPrivacyOldPassword] = useState('');
+    const [privacyNewPassword, setPrivacyNewPassword] = useState('');
+    const [showPrivacyOldPassword, setShowPrivacyOldPassword] = useState(false);
+    const [showPrivacyNewPassword, setShowPrivacyNewPassword] = useState(false);
+    const [privacyError, setPrivacyError] = useState<string | null>(null);
+    const [isMigrating, setIsMigrating] = useState(false);
 
     useEffect(() => {
         setPassword(localStorage.getItem(SYNC_PASSWORD_KEY) || '');
@@ -126,6 +150,45 @@ const DataTab: React.FC<DataTabProps> = ({ onOpenImport, onClose, onCreateBackup
         }
     }, [fetchBackups, onRestoreBackup]);
 
+    const isSyncPasswordReady = password.trim().length > 0;
+    const currentPrivacyMode = useSeparatePrivacyPassword ? '独立密码' : '同步密码';
+
+    const resetPrivacyMigration = useCallback(() => {
+        setPrivacyTarget(null);
+        setPrivacyOldPassword('');
+        setPrivacyNewPassword('');
+        setPrivacyError(null);
+        setShowPrivacyOldPassword(false);
+        setShowPrivacyNewPassword(false);
+    }, []);
+
+    const handleStartPrivacyMigration = (target: 'sync' | 'separate') => {
+        setPrivacyTarget(target);
+        setPrivacyOldPassword('');
+        setPrivacyNewPassword('');
+        setPrivacyError(null);
+    };
+
+    const handleConfirmPrivacyMigration = useCallback(async () => {
+        if (!privacyTarget) return;
+        setIsMigrating(true);
+        setPrivacyError(null);
+        try {
+            const success = await onMigratePrivacyMode({
+                useSeparatePassword: privacyTarget === 'separate',
+                oldPassword: privacyOldPassword,
+                newPassword: privacyNewPassword
+            });
+            if (!success) {
+                setPrivacyError('迁移失败，请检查密码后重试');
+                return;
+            }
+            resetPrivacyMigration();
+        } finally {
+            setIsMigrating(false);
+        }
+    }, [privacyTarget, privacyOldPassword, privacyNewPassword, onMigratePrivacyMode, resetPrivacyMigration]);
+
     useEffect(() => {
         fetchBackups();
     }, [fetchBackups]);
@@ -176,6 +239,153 @@ const DataTab: React.FC<DataTabProps> = ({ onOpenImport, onClose, onCreateBackup
                             如需增强安全性，请在 Cloudflare Pages 后台设置 <code>SYNC_PASSWORD</code> 环境变量，并在此处输入相同密码。
                         </p>
                     </div>
+                </div>
+
+                {/* Privacy Vault */}
+                <div className="mb-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/40">
+                    <div className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200">
+                        <Lock size={14} className="text-slate-500" />
+                        隐私分组
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                        <span className="text-xs text-slate-600 dark:text-slate-300">启用隐私分组</span>
+                        <button
+                            type="button"
+                            onClick={() => onTogglePrivacyGroup(!privacyGroupEnabled)}
+                            className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${privacyGroupEnabled ? 'bg-accent' : 'bg-slate-200 dark:bg-slate-700'}`}
+                            aria-pressed={privacyGroupEnabled}
+                        >
+                            <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${privacyGroupEnabled ? 'translate-x-5' : 'translate-x-1'}`}
+                            />
+                        </button>
+                    </div>
+                    {!privacyGroupEnabled && (
+                        <div className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                            已关闭后侧边栏不显示隐私分组
+                        </div>
+                    )}
+                    <div className="mt-3 flex items-center justify-between">
+                        <span className="text-xs text-slate-600 dark:text-slate-300">自动解锁</span>
+                        <button
+                            type="button"
+                            onClick={() => onTogglePrivacyAutoUnlock(!privacyAutoUnlockEnabled)}
+                            disabled={!privacyGroupEnabled}
+                            className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${privacyAutoUnlockEnabled ? 'bg-accent' : 'bg-slate-200 dark:bg-slate-700'} ${!privacyGroupEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            aria-pressed={privacyAutoUnlockEnabled}
+                        >
+                            <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${privacyAutoUnlockEnabled ? 'translate-x-5' : 'translate-x-1'}`}
+                            />
+                        </button>
+                    </div>
+                    {privacyAutoUnlockEnabled && (
+                        <div className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                            仅当前标签页有效，关闭标签页后自动加锁
+                        </div>
+                    )}
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                        当前模式：{currentPrivacyMode}
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            onClick={() => handleStartPrivacyMigration('separate')}
+                            disabled={useSeparatePrivacyPassword || !isSyncPasswordReady}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-accent/50 hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            切换为独立密码
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleStartPrivacyMigration('sync')}
+                            disabled={!useSeparatePrivacyPassword}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-accent/50 hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            切换为同步密码
+                        </button>
+                    </div>
+
+                    {!isSyncPasswordReady && !useSeparatePrivacyPassword && (
+                        <div className="mt-2 text-[10px] text-amber-600 dark:text-amber-400">
+                            启用独立密码前请先设置同步密码。
+                        </div>
+                    )}
+
+                    {privacyTarget && (
+                        <div className="mt-4 space-y-3">
+                            <div className="text-xs text-slate-600 dark:text-slate-300">
+                                请输入旧密码与新密码后完成迁移。
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                    旧密码
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showPrivacyOldPassword ? 'text' : 'password'}
+                                        value={privacyOldPassword}
+                                        onChange={(e) => setPrivacyOldPassword(e.target.value)}
+                                        placeholder="请输入旧密码"
+                                        className="w-full pl-3 pr-10 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPrivacyOldPassword(prev => !prev)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                    >
+                                        {showPrivacyOldPassword ? <EyeOff size={12} /> : <Eye size={12} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                    新密码
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showPrivacyNewPassword ? 'text' : 'password'}
+                                        value={privacyNewPassword}
+                                        onChange={(e) => setPrivacyNewPassword(e.target.value)}
+                                        placeholder={privacyTarget === 'sync' ? '必须与同步密码一致' : '请输入新独立密码'}
+                                        className="w-full pl-3 pr-10 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPrivacyNewPassword(prev => !prev)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                    >
+                                        {showPrivacyNewPassword ? <EyeOff size={12} /> : <Eye size={12} />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {privacyError && (
+                                <div className="text-xs text-red-600 dark:text-red-400">
+                                    {privacyError}
+                                </div>
+                            )}
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleConfirmPrivacyMigration}
+                                    disabled={isMigrating || (privacyTarget === 'separate' && !isSyncPasswordReady)}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-white hover:bg-accent/90 disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    {isMigrating ? '迁移中...' : '确认迁移'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={resetPrivacyMigration}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-300 hover:text-slate-700 dark:hover:text-white"
+                                >
+                                    取消
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Backup List */}

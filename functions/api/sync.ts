@@ -33,6 +33,7 @@ interface YNavSyncData {
     searchConfig?: any;
     aiConfig?: any;
     siteSettings?: any;
+    privateVault?: string;
     meta: SyncMetadata;
 }
 

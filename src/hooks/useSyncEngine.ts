@@ -340,13 +340,15 @@ export function buildSyncData(
     categories: Category[],
     searchConfig?: SearchConfig,
     aiConfig?: AIConfig,
-    siteSettings?: SiteSettings
+    siteSettings?: SiteSettings,
+    privateVault?: string
 ): Omit<YNavSyncData, 'meta'> {
     return {
         links,
         categories,
         searchConfig,
         aiConfig,
-        siteSettings
+        siteSettings,
+        privateVault
     };
 }

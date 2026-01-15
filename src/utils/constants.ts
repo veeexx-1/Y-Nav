@@ -12,6 +12,15 @@ export const SYNC_META_KEY = 'ynav_sync_meta';
 export const SYNC_PASSWORD_KEY = 'ynav_sync_password';
 export const LAST_SYNC_KEY = 'ynav_last_sync';
 
+// Privacy Vault Keys
+export const PRIVATE_VAULT_KEY = 'ynav_private_vault_v1';
+export const PRIVACY_PASSWORD_KEY = 'ynav_privacy_password';
+export const PRIVACY_USE_SEPARATE_PASSWORD_KEY = 'ynav_privacy_use_separate_password';
+export const PRIVACY_GROUP_ENABLED_KEY = 'ynav_privacy_group_enabled';
+export const PRIVACY_AUTO_UNLOCK_KEY = 'ynav_privacy_auto_unlock';
+export const PRIVACY_SESSION_UNLOCKED_KEY = 'ynav_privacy_session_unlocked';
+export const PRIVATE_CATEGORY_ID = '__private__';
+
 // Sync Configuration
 export const SYNC_DEBOUNCE_MS = 3000; // 3秒内无新操作则触发同步
 export const SYNC_API_ENDPOINT = '/api/sync';

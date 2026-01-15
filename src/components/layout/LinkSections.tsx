@@ -4,6 +4,7 @@ import { DndContext, DragEndEvent, closestCorners, SensorDescriptor } from '@dnd
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { Pin, Trash2, CheckSquare, Upload, Search, X, RefreshCw } from 'lucide-react';
 import { Category, LinkItem } from '../../types';
+import { PRIVATE_CATEGORY_ID } from '../../utils/constants';
 import Icon from '../ui/Icon';
 import LinkCard from '../ui/LinkCard';
 import SortableLinkCard from '../ui/SortableLinkCard';
@@ -47,6 +48,10 @@ interface LinkSectionsProps {
   onLinkSelect: (id: string) => void;
   onLinkContextMenu: (e: React.MouseEvent, link: LinkItem) => void;
   onLinkEdit: (link: LinkItem) => void;
+  isPrivateUnlocked: boolean;
+  onPrivateUnlock: (password?: string) => Promise<boolean>;
+  privateUnlockHint: string;
+  privateUnlockSubHint?: string;
 }
 
 const ClockWidget: React.FC = () => {
@@ -102,8 +107,13 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
   onAddLink,
   onLinkSelect,
   onLinkContextMenu,
-  onLinkEdit
+  onLinkEdit,
+  isPrivateUnlocked,
+  onPrivateUnlock,
+  privateUnlockHint,
+  privateUnlockSubHint
 }) => {
+  const isPrivateCategory = selectedCategory === PRIVATE_CATEGORY_ID;
   const showPinnedSection = pinnedLinks.length > 0 && !searchQuery && (selectedCategory === 'all');
   const showMainSection = (selectedCategory !== 'all' || searchQuery);
   const gridClassName = 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5';
@@ -115,6 +125,32 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
   const moveMenuCloseTimeoutRef = React.useRef<number | null>(null);
   const [moveMenuOpen, setMoveMenuOpen] = React.useState(false);
   const [moveMenuPosition, setMoveMenuPosition] = React.useState({ top: 0, left: 0 });
+  const [privatePassword, setPrivatePassword] = React.useState('');
+  const [privateUnlockError, setPrivateUnlockError] = React.useState<string | null>(null);
+  const [isPrivateUnlocking, setIsPrivateUnlocking] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isPrivateCategory) {
+      setPrivatePassword('');
+      setPrivateUnlockError(null);
+      setIsPrivateUnlocking(false);
+    }
+  }, [isPrivateCategory]);
+
+  const handlePrivateUnlock = React.useCallback(async () => {
+    setIsPrivateUnlocking(true);
+    setPrivateUnlockError(null);
+    try {
+      const success = await onPrivateUnlock(privatePassword);
+      if (!success) {
+        setPrivateUnlockError('解锁失败，请检查密码');
+      } else {
+        setPrivatePassword('');
+      }
+    } finally {
+      setIsPrivateUnlocking(false);
+    }
+  }, [onPrivateUnlock, privatePassword]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -196,6 +232,12 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
   }, [hitokoto]);
 
   const hitokotoText = hitokoto?.hitokoto?.trim() || '';
+  const activeCategory = React.useMemo(() => {
+    if (isPrivateCategory) {
+      return { name: '隐私分组', icon: 'Lock' };
+    }
+    return categories.find((c) => c.id === selectedCategory) || null;
+  }, [categories, isPrivateCategory, selectedCategory]);
 
   const handleCopyHitokoto = async () => {
     if (!hitokotoText) return;
@@ -365,13 +407,13 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
               <div className="flex items-center gap-3">
                 {selectedCategory !== 'all' && (
                   <div className="p-2 rounded-lg bg-accent/10">
-                    <Icon name={categories.find((c) => c.id === selectedCategory)?.icon || 'Folder'} size={16} className="text-accent" />
+                    <Icon name={activeCategory?.icon || 'Folder'} size={16} className="text-accent" />
                   </div>
                 )}
                 <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
                   {selectedCategory === 'all'
                     ? (searchQuery ? '搜索结果' : '所有链接')
-                    : categories.find((c) => c.id === selectedCategory)?.name
+                    : (activeCategory?.name || '未命名分类')
                   }
                 </h2>
                 {displayedLinks.length > 0 && (
@@ -382,7 +424,7 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
               </div>
 
               {/* Batch Edit Controls */}
-              {selectedCategory !== 'all' && !isSortingMode && (
+              {selectedCategory !== 'all' && !isSortingMode && !isPrivateCategory && (
                 <div className="flex items-center gap-2">
                   {!isBatchEditMode ? (
                     <button
@@ -452,55 +494,92 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
               )}
             </div>
 
-            {displayedLinks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+            {isPrivateCategory && !isPrivateUnlocked ? (
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400">
                 <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
-                  <Search size={32} className="opacity-40" />
+                  <Icon name="Lock" size={28} className="text-slate-400" />
                 </div>
-                <p className="text-sm">没有找到相关内容</p>
-                {selectedCategory !== 'all' && (
-                  <button onClick={onAddLink} className="mt-4 text-sm text-accent hover:underline focus:outline-none focus:ring-2 focus:ring-accent/50 rounded">添加一个?</button>
+                <p className="text-sm text-slate-600 dark:text-slate-300">{privateUnlockHint}</p>
+                {privateUnlockSubHint && (
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">{privateUnlockSubHint}</p>
                 )}
+                <div className="mt-4 w-full max-w-xs">
+                  <input
+                    type="password"
+                    value={privatePassword}
+                    onChange={(e) => setPrivatePassword(e.target.value)}
+                    placeholder="请输入密码"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handlePrivateUnlock();
+                      }
+                    }}
+                  />
+                  {privateUnlockError && (
+                    <div className="mt-2 text-xs text-red-600 dark:text-red-400">{privateUnlockError}</div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handlePrivateUnlock}
+                    disabled={isPrivateUnlocking}
+                    className="mt-3 w-full px-3 py-2 rounded-lg text-sm font-semibold bg-accent text-white hover:bg-accent/90 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isPrivateUnlocking ? '解锁中...' : '解锁'}
+                  </button>
+                </div>
               </div>
             ) : (
-              isSortingMode === selectedCategory ? (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCorners}
-                  onDragEnd={onDragEnd}
-                >
-                  <SortableContext
-                    items={displayedLinks.map((link) => link.id)}
-                    strategy={rectSortingStrategy}
-                  >
-                    <div className={`grid gap-4 ${gridClassName}`}>
-                      {displayedLinks.map((link) => (
-                        <SortableLinkCard
-                          key={link.id}
-                          link={link}
-                          siteCardStyle={siteCardStyle}
-                          isSortingMode={true}
-                          isSortingPinned={false}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              ) : (
-                <div className={`grid gap-4 ${gridClassName}`}>
-                  {displayedLinks.map((link) => (
-                    <LinkCard
-                      key={link.id}
-                      link={link}
-                      siteCardStyle={siteCardStyle}
-                      isBatchEditMode={isBatchEditMode}
-                      isSelected={selectedLinks.has(link.id)}
-                      onSelect={onLinkSelect}
-                      onContextMenu={onLinkContextMenu}
-                      onEdit={onLinkEdit}
-                    />
-                  ))}
+              displayedLinks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                  <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
+                    <Search size={32} className="opacity-40" />
+                  </div>
+                  <p className="text-sm">没有找到相关内容</p>
+                  {selectedCategory !== 'all' && (
+                    <button onClick={onAddLink} className="mt-4 text-sm text-accent hover:underline focus:outline-none focus:ring-2 focus:ring-accent/50 rounded">添加一个?</button>
+                  )}
                 </div>
+              ) : (
+                isSortingMode === selectedCategory ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCorners}
+                    onDragEnd={onDragEnd}
+                  >
+                    <SortableContext
+                      items={displayedLinks.map((link) => link.id)}
+                      strategy={rectSortingStrategy}
+                    >
+                      <div className={`grid gap-4 ${gridClassName}`}>
+                        {displayedLinks.map((link) => (
+                          <SortableLinkCard
+                            key={link.id}
+                            link={link}
+                            siteCardStyle={siteCardStyle}
+                            isSortingMode={true}
+                            isSortingPinned={false}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                ) : (
+                  <div className={`grid gap-4 ${gridClassName}`}>
+                    {displayedLinks.map((link) => (
+                      <LinkCard
+                        key={link.id}
+                        link={link}
+                        siteCardStyle={siteCardStyle}
+                        isBatchEditMode={isBatchEditMode}
+                        isSelected={selectedLinks.has(link.id)}
+                        onSelect={onLinkSelect}
+                        onContextMenu={onLinkContextMenu}
+                        onEdit={onLinkEdit}
+                      />
+                    ))}
+                  </div>
+                )
               )
             )}
           </section>

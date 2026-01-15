@@ -117,6 +117,7 @@ export interface YNavSyncData {
   searchConfig?: SearchConfig;
   aiConfig?: AIConfig;
   siteSettings?: SiteSettings;
+  privateVault?: string;
   meta: SyncMetadata;
 }
 

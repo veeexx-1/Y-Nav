@@ -17,6 +17,12 @@ interface SettingsModalProps {
   onOpenImport: () => void;
   onCreateBackup: () => Promise<boolean>;
   onRestoreBackup: (backupKey: string) => Promise<boolean>;
+  useSeparatePrivacyPassword: boolean;
+  onMigratePrivacyMode: (payload: { useSeparatePassword: boolean; oldPassword: string; newPassword: string }) => Promise<boolean>;
+  privacyGroupEnabled: boolean;
+  onTogglePrivacyGroup: (enabled: boolean) => void;
+  privacyAutoUnlockEnabled: boolean;
+  onTogglePrivacyAutoUnlock: (enabled: boolean) => void;
   closeOnBackdrop?: boolean;
 }
 
@@ -31,6 +37,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onOpenImport,
   onCreateBackup,
   onRestoreBackup,
+  useSeparatePrivacyPassword,
+  onMigratePrivacyMode,
+  privacyGroupEnabled,
+  onTogglePrivacyGroup,
+  privacyAutoUnlockEnabled,
+  onTogglePrivacyAutoUnlock,
   closeOnBackdrop = true
 }) => {
   const [activeTab, setActiveTab] = useState<'site' | 'ai' | 'appearance' | 'data'>('site');
@@ -173,6 +185,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               onClose={onClose}
               onCreateBackup={onCreateBackup}
               onRestoreBackup={onRestoreBackup}
+              useSeparatePrivacyPassword={useSeparatePrivacyPassword}
+              onMigratePrivacyMode={onMigratePrivacyMode}
+              privacyGroupEnabled={privacyGroupEnabled}
+              onTogglePrivacyGroup={onTogglePrivacyGroup}
+              privacyAutoUnlockEnabled={privacyAutoUnlockEnabled}
+              onTogglePrivacyAutoUnlock={onTogglePrivacyAutoUnlock}
             />
           )}
         </div>
